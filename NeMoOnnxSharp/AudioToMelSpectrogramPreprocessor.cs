@@ -15,7 +15,7 @@ namespace NeMoOnnxSharp
             double[] window = new double[windowLength];
             for (int i = 0; i < windowLength; i++)
             {
-                window[i] = 0.5 * (1 - Math.Cos(2 * Math.PI * i / windowLength));
+                window[i] = 0.5 * (1 - Math.Cos(2 * Math.PI * i / (windowLength - 1)));
             }
             return window;
         }
@@ -30,12 +30,13 @@ namespace NeMoOnnxSharp
         private readonly int _nMelBands;
         private readonly double _sampleRate;
         private readonly double _logOffset;
+        private readonly double _stdOffset;
         private readonly double _preemph;
 
         public AudioToMelSpectrogramPreprocessor(
             int sampleRate = 16000,
-            double windowSize = 0.2,
-            double windowStride = 0.1,
+            double windowSize = 0.02,
+            double windowStride = 0.01,
             int stftLength = 512,
             int nMelBands = 64, double melMinHz = 0.0, double melMaxHz = 0.0,
             double preemph = 0.97)
@@ -55,6 +56,7 @@ namespace NeMoOnnxSharp
             _nMelBands = nMelBands;
             _preemph = preemph;
             _logOffset = Math.Pow(2, -24);
+            _stdOffset = 1e-5;
         }
 
         public float[] Process(short[] waveform)
@@ -67,6 +69,7 @@ namespace NeMoOnnxSharp
                     waveform, _hopWidth * i, 
                     audioSignal, i, audioSignalLength);
             }
+            Normalize(audioSignal, audioSignalLength);
             return audioSignal;
         }
 
@@ -97,7 +100,7 @@ namespace NeMoOnnxSharp
                     if (hz > peakHz)
                         break;
                     double r = (hz - startHz) / (peakHz - startHz);
-                    v += spec[j] * r;
+                    v += spec[j] * r * 2 / (endHz - startHz);
                     j++;
                 }
                 while (true)
@@ -106,10 +109,38 @@ namespace NeMoOnnxSharp
                     if (hz > endHz)
                         break;
                     double r = (endHz - hz) / (endHz - peakHz);
-                    v += spec[j] * r;
+                    v += spec[j] * r * 2 / (endHz - startHz);
                     j++;
                 }
                 melspec[melspecOffset + melspecStride * i] = (float)Math.Log(v + _logOffset);
+            }
+        }
+
+        private void Normalize(float[] melspec, int melspecStride)
+        {
+            for (int i = 0; i < _nMelBands; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < melspecStride; j++)
+                {
+                    double v = melspec[melspecStride * i + j];
+                    sum += v;
+                }
+                float mean = (float)(sum / melspecStride);
+                sum = 0;
+                for (int j = 0; j < melspecStride; j++)
+                {
+                    double v = melspec[melspecStride * i + j] - mean;
+                    sum += v * v;
+                }
+                double std = Math.Sqrt(sum / melspecStride);
+                float invStd = (float)(1.0 / (_stdOffset + std));
+
+                for (int j = 0; j < melspecStride; j++)
+                {
+                    float v = melspec[melspecStride * i + j];
+                    melspec[melspecStride * i + j] = (v - mean) * invStd;
+                }
             }
         }
 
@@ -124,8 +155,8 @@ namespace NeMoOnnxSharp
                 {
                     int k = i + waveformOffset;
                     double v = (k >= 0 && k < waveform.Length) ? waveform[k] : 0;
-                    k++;
-                    if (k >= 0 && k < waveform.Length) v -= _preemph * waveform[j];
+                    k--;
+                    if (k >= 0 && k < waveform.Length) v -= _preemph * waveform[k];
                     frame[i] = scale * v * _window[j];
                 }
                 else
@@ -145,12 +176,46 @@ namespace NeMoOnnxSharp
 
         static double HzToMel(double hz)
         {
-            return 2595 * Math.Log10(1 + hz / 700);
+            const double minLogHz = 1000.0;  // beginning of log region in Hz
+            const double linearMelHz = 200.0 / 3;
+            double mel;
+            if (hz >= minLogHz)
+            {
+                // Log region
+                const double minLogMel = minLogHz / linearMelHz;
+                double logStep = Math.Log(6.4) / 27.0;
+                mel = minLogMel + Math.Log(hz / minLogHz) / logStep;
+            }
+            else
+            {
+                // Linear region
+                mel = hz / linearMelHz;
+            }
+
+            return mel;
         }
 
         static double MelToHz(double mel)
         {
-            return (Math.Pow(10, mel / 2595) - 1) * 700;
+            const double minLogHz = 1000.0;  // beginning of log region in Hz
+            const double linearMelHz = 200.0 / 3;
+            const double minLogMel = minLogHz / linearMelHz;  // same (Mels)
+            double freq;
+
+
+            if (mel >= minLogMel)
+            {
+                // Log region
+                double logStep = Math.Log(6.4) / 27.0;
+                freq = minLogHz * Math.Exp(logStep * (mel - minLogMel));
+            }
+            else
+            {
+                // Linear region
+                freq = linearMelHz * mel;
+            }
+
+            return freq;
         }
 
         static double[] MakeMelBands(double melMinHz, double melMaxHz, int nMelBanks)
