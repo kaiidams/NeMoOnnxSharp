@@ -1,24 +1,27 @@
-﻿using NAudio.Wave;
-using NeMoOnnxSharp;
+﻿using NeMoOnnxSharp;
 using System.Runtime.InteropServices;
 
 short[] ReadWav(string waveFile)
 {
-    short[] waveData;
-    using (var reader = new WaveFileReader(waveFile))
-    using (var writer = new MemoryStream())
+    using var stream = File.OpenRead(waveFile);
+    using var reader = new BinaryReader(stream);
+    string fourCC = new string(reader.ReadChars(4));
+    if (fourCC != "RIFF")
+        throw new InvalidDataException();
+    int chunkLen = reader.ReadInt32();
+    fourCC = new string(reader.ReadChars(4));
+    if (fourCC != "WAVE")
+        throw new InvalidDataException();
+    while (true)
     {
-        while (true)
+        fourCC = new string(reader.ReadChars(4));
+        chunkLen = reader.ReadInt32();
+        byte[] byteData = reader.ReadBytes(chunkLen);
+        if (fourCC == "data")
         {
-            byte[] buffer = new byte[4096];
-            int readBytes = reader.Read(buffer, 0, buffer.Length);
-            if (readBytes == 0) break;
-            writer.Write(buffer, 0, readBytes);
+            return MemoryMarshal.Cast<byte, short>(byteData).ToArray();
         }
-        var byteData = writer.ToArray();
-        waveData = MemoryMarshal.Cast<byte, short>(byteData).ToArray();
     }
-    return waveData;
 }
 
 string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
