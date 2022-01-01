@@ -1,4 +1,4 @@
-# Speech recognizer with QuartzNet and ONNX
+# Speech recognizer with QuartzNet and ONNX Runtime
 
 This repository explains how to export 
 [QuartzNet](https://arxiv.org/abs/1910.10261)
@@ -13,7 +13,28 @@ to recognize English texts from audio.
 
 ## Quick Start
 
-Open `NeMoOnnxSharp\NeMoOnnxSharp.sln` and run with `F5`. The program reads a test file,
+You need 
+
+Clone the repository. Make sure to enable
+[Git LFS](https://git-lfs.github.com/)
+as ONNX and WAV files are stored in LFS.
+
+```
+git clone https://github.com/kaiidams/NeMoOnnxSharp.git
+```
+
+Run `dotnet` command to run the program. The project file
+is for .NET Core 3.1 SDK. This should work either with
+both Linux and Windows, also probably with MacOS.
+If you are more famililar to Visual Studio, you can open
+`NeMoOnnxSharp\NeMoOnnxSharp.sln` and run the program with `F5`. 
+
+```
+cd NeMoOnnxSharp/NeMoOnnxSharp
+dotnet run
+```
+
+The program reads a test file,
 `test_data\transcript.txt` and print predicted results. The format of the output is
 three columns separated by `|`, names of wav files, target texts, predicted texts.
 The test data is from
