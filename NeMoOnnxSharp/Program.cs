@@ -26,7 +26,7 @@ short[] ReadWav(string waveFile)
 
 string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
 string modelPath = Path.Combine(appDirPath, "QuartzNet15x5Base-En.onnx");
-string inputDirPath = @"..\..\..\..\test_data";
+string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
 using var recognizer = new SpeechRecognizer(modelPath);
