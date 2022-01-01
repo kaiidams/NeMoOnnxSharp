@@ -123,3 +123,66 @@ import nemo.collections.asr as nemo_asr
 quartznet = nemo_asr.models.EncDecCTCModel.from_pretrained(model_name="QuartzNet15x5Base-En")
 quartznet.export("QuartzNet15x5Base-En.onnx")
 ```
+
+## How it works
+
+Most of deep-learning system are composed of pre-processing, model and post-processing.
+Model code is usually written with deep-learning framework like PyTorch and TensorFlow.
+Model consumes numeric arrays called tensors and produces tensors.
+Pre-processing code receives inputs for the system like texts, audio clips, images
+and converts them into tensors so that deep-learning framework can handle. Post-processing code
+receives tensors and converts them into the final output forms.
+
+For pre-processing of ASR task, audio data are usually divided into short time frames
+and converted into log spectrogram, log mel-spectrogram or MFCC. QuartzNet uses 16000Hz
+sampling rate, 10ms frame, 64 dimention mel-spectrogram. 5 sec audio is divided into
+500 frames so it makes a 32-bit float tensor of 64x500 elements. There are a lot of flavors of
+conversions and they are not well explained in research papers, so you need to read the code
+carefully so that you make sure that doing the exactly same conversion.
+
+### Pre-processing
+
+QuartzNet's pre-processing is implemented in `nemo_asr.modules.AudioToMelSpectrogramPreprocessor`.
+You can instantiate a preprocessor with proper parameters from config file
+`examples/asr/conf/quartznet/quartznet_15x5.yaml`.
+See `NeMoOnnxTest.test_nemo_preprocess()` of `Python/nemo_onnx_test.py` for example.
+
+```py
+config = OmegaConf.load(config_file)
+preprocessor = nemo_asr.models.EncDecCTCModel.from_config_dict(config.model.preprocessor)
+preprocessor.eval()
+audio_signal, audio_signal_length = preprocessor(
+    input_signal=input_signal,
+    length=input_signal_length)
+```
+
+`nemo_asr.modules.AudioToMelSpectrogramPreprocessor` is a complicated class so that researchers
+can try various configurations. Essentially it does the following things for QuartzNet.
+
+- Pre-emphasis (High band filter so emphasize high-freq)
+- Get frames with [Hann window](https://en.wikipedia.org/wiki/Hann_function)
+- Short-time Fourier fransform
+- Convert complex to squared magnitude
+- Convert to mel-spectrogram
+- Convert to log mel-spectrogram
+- Normalize per feature (i.e. normalize using mean and std along the time per feature)
+
+in C# code, `NeMoOnnxSharp.AudioToMelSpectrogramPreprocessor` does the same conversion except 
+input audio format is 16-bit integers, not 32-bit floats. Torch implementation uses vectorization
+for efficient parallelization, but C# implementation computes frame by frame for efficient memory
+usage.
+
+### Post-processing
+
+Post-processing is simpler than pre-processing. The model outputs log probabilities for each
+time frame and labels. The label is raw English text in case of QuartzNet.
+Post-processing does the following things,
+
+- gets the most probable labels
+- decode into characters
+- then decode CTC.
+
+Decoding CTC is eliminating duplicated characters as one English characters may span more than
+one time frame.
+
+See `NeMoOnnxTest.postprocess()` for Python implementation.
