@@ -13,8 +13,6 @@ to recognize English texts from audio.
 
 ## Quick Start
 
-You need 
-
 Clone the repository. Make sure to enable
 [Git LFS](https://git-lfs.github.com/)
 as ONNX and WAV files are stored in LFS.
@@ -25,14 +23,15 @@ git clone https://github.com/kaiidams/NeMoOnnxSharp.git
 
 Run `dotnet` command to run the program. The project file
 is for .NET Core 3.1 SDK. This should work either with
-both Linux and Windows, also probably with MacOS.
-If you are more famililar to Visual Studio, you can open
-`NeMoOnnxSharp\NeMoOnnxSharp.sln` and run the program with `F5`. 
+Linux and Windows, also probably with MacOS.
 
 ```
 cd NeMoOnnxSharp/NeMoOnnxSharp
 dotnet run
 ```
+
+If you are more famililar to Visual Studio, you can open
+`NeMoOnnxSharp\NeMoOnnxSharp.sln` and run the program with `F5`. 
 
 The program reads a test file,
 `test_data\transcript.txt` and print predicted results. The format of the output is
@@ -107,3 +106,20 @@ Name | Target | Predicted
 61-70968-0060.wav|no thanks i am glad to give you such easy happiness|no thanks i am glad to give you such easy happiness
 61-70968-0061.wav|you are a worthy leech will presently whispered robin the wine has worked a marvel|you are a worthy leech will presently whispered robin the wine has worked a marvel
 61-70968-0062.wav|ay and show you some pretty tricks|i enshow you some pretty tricks
+
+## Exporting ONNX
+
+Exported ONNX file is included in this repository. But if you want to do it yourself,
+you can use [NeMo](https://github.com/NVIDIA/NeMo).
+
+```s
+pip install 'git+https://github.com/NVIDIA/NeMo.git#egg=nemo_toolkit[asr]'
+```
+
+Then run the script below to export the model as an ONNX file.
+
+```py
+import nemo.collections.asr as nemo_asr
+quartznet = nemo_asr.models.EncDecCTCModel.from_pretrained(model_name="QuartzNet15x5Base-En")
+quartznet.export("QuartzNet15x5Base-En.onnx")
+```
