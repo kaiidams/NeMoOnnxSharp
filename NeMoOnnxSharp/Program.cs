@@ -21,12 +21,21 @@ short[] ReadWav(string waveFile)
     return waveData;
 }
 
-string waveFile = "test.wav";
 string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
 string modelPath = Path.Combine(appDirPath, "QuartzNet15x5Base-En.onnx");
-using (var recognizer = new SpeechRecognizer(modelPath))
+string inputDirPath = @"..\..\..\..\test_data";
+string inputPath = Path.Combine(inputDirPath, "transcript.txt");
+
+using var recognizer = new SpeechRecognizer(modelPath);
+using var reader = File.OpenText(inputPath);
+string line;
+while ((line = reader.ReadLine()) != null)
 {
+    string[] parts = line.Split("|");
+    string name = parts[0];
+    string targetText = parts[1];
+    string waveFile = Path.Combine(inputDirPath, name);
     var waveform = ReadWav(waveFile);
-    string text = recognizer.Recognize(waveform);
-    Console.WriteLine("Recognized: {0}", text);
+    string predictText = recognizer.Recognize(waveform);
+    Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
 }
