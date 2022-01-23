@@ -56,6 +56,7 @@ namespace NeMoOnnxSharp
             }
         }
 
+#if false
         private static void CFFTRef(double[] xr, double[] xi, int N)
         {
             double[] yr = new double[N];
@@ -78,5 +79,6 @@ namespace NeMoOnnxSharp
                 xi[i] = yi[i];
             }
         }
+#endif
     }
 }
