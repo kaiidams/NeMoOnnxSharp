@@ -38,12 +38,12 @@ namespace NeMoOnnxSharp
                     if (formatTag != 1) throw new InvalidDataException("Only PCM format is supported");
                     short numChannels = reader.ReadInt16();
                     if (numChannels != (mono ? 1 : 2)) throw new NotSupportedException();
-                    int fileRate = reader.ReadInt32();
-                    if (fileRate != rate) throw new NotSupportedException();
+                    int originalRate = reader.ReadInt32();
+                    if (originalRate != rate) throw new NotSupportedException();
                     int avgBytesPerSec = reader.ReadInt32();
                     short blockAlign = reader.ReadInt16();
                     short bitsPerSample = reader.ReadInt16();
-                    if (avgBytesPerSec * 8 != fileRate * bitsPerSample * numChannels)
+                    if (avgBytesPerSec * 8 != originalRate * bitsPerSample * numChannels)
                     {
                         throw new InvalidDataException();
                     }
