@@ -2,30 +2,28 @@ name: build
 
 on:
   push:
+    branches: [ develop ]
+    paths:
+    - '**.cs'
+    - '**.csproj'
   pull_request:
     branches: [ main ]
     paths:
     - '**.cs'
     - '**.csproj'
 
-env:
-  DOTNET_VERSION: '3.1' # The .NET SDK version to use
-
 jobs:
   build:
 
-    name: build
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
-    - name: Setup .NET Core
+    - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-
-    - name: Install dependencies
+        dotnet-version: 5.0.x
+    - name: Restore dependencies
       run: dotnet restore
-      
     - name: Build
       run: dotnet build --configuration Release --no-restore
