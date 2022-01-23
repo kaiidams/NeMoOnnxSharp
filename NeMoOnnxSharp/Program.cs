@@ -17,7 +17,7 @@ namespace NeMoOnnxSharp
             if (settings.Model == "QuartzNet15x5Base-En")
             {
                 string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
-                string modelPath = Path.Combine(appDirPath, "QuartzNet15x5Base-En.onnx");
+                string modelPath = Path.Combine(appDirPath, "Assets", "QuartzNet15x5Base-En.onnx");
                 string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
@@ -30,7 +30,7 @@ namespace NeMoOnnxSharp
                     string name = parts[0];
                     string targetText = parts[1];
                     string waveFile = Path.Combine(inputDirPath, name);
-                    var waveform = WaveFile.ReadWav(waveFile);
+                    var waveform = WaveFile.ReadWav(waveFile, 16000, true);
                     string predictText = recognizer.Recognize(waveform);
                     Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
                 }
