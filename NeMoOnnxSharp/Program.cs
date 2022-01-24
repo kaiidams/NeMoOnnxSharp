@@ -12,12 +12,14 @@ namespace NeMoOnnxSharp
                 .AddJsonFile("appsettings.json")
                 .AddEnvironmentVariables()
                 .Build();
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string cacheDirectoryPath = Path.Combine(appDirPath, "Cache");
+            ModelDownloader downloader = new ModelDownloader(null, cacheDirectoryPath);
+            string modelPath = downloader.MayDownload();
 
             var settings = config.GetRequiredSection("Settings").Get<Settings>();
             if (settings.Model == "QuartzNet15x5Base-En")
             {
-                string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
-                string modelPath = Path.Combine(appDirPath, "Assets", "QuartzNet15x5Base-En.onnx");
                 string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
