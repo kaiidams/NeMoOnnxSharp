@@ -45,12 +45,12 @@ namespace NeMoOnnxSharp
             return false;
         }
 
-        public async Task<string> MayDownloadAsync(string url)
+        public async Task<string> MayDownloadAsync(string url, string expectedChecksum)
         {
             Directory.CreateDirectory(_cacheDirectoryPath);
+            string fileName = GetFileNameFromUrl(url);
 
-            string cacheFilePath = Path.Combine(_cacheDirectoryPath, "QuartzNet15x5Base-En.onnx");
-            string expectedChecksum = "ee1b72102fd0c5422d088e80f929dbdee7e889d256a4ce1e412cd49916823695";
+            string cacheFilePath = Path.Combine(_cacheDirectoryPath, fileName);
             if (CheckCacheFile(cacheFilePath, expectedChecksum))
             {
                 Console.WriteLine("Cache hit");
@@ -61,6 +61,21 @@ namespace NeMoOnnxSharp
             using var outputStream = File.OpenWrite(cacheFilePath);
             await inputStream.CopyToAsync(outputStream);
             return cacheFilePath;
+        }
+
+        private static string GetFileNameFromUrl(string url)
+        {
+            int slashIndex = url.LastIndexOf("/");
+            if (slashIndex == -1)
+            {
+                throw new ArgumentException();
+            }
+            string fileName = url.Substring(slashIndex + 1);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                throw new ArgumentException();
+            }
+            return fileName;
         }
     }
 }

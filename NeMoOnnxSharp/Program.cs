@@ -8,6 +8,8 @@ namespace NeMoOnnxSharp
 {
     internal class Program
     {
+        private static string AppName = "NeMoOnnxSharp";
+
         static async Task Main(string[] args)
         {
             IConfiguration config = new ConfigurationBuilder()
@@ -15,17 +17,22 @@ namespace NeMoOnnxSharp
                 .AddEnvironmentVariables()
                 .Build();
             var settings = config.GetRequiredSection("Settings").Get<Settings>();
-            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string basePath = AppDomain.CurrentDomain.BaseDirectory;
+            string appDirPath = Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData,
+                    Environment.SpecialFolderOption.DoNotVerify),
+                AppName);
             string cacheDirectoryPath = Path.Combine(appDirPath, "Cache");
             var bundle = ModelBundle.GetBundle(settings.Model);
             Console.WriteLine("{0}", bundle.ModelUrl);
             using var httpClient = new HttpClient();
             var downloader = new ModelDownloader(httpClient, cacheDirectoryPath);
-            string modelPath = await downloader.MayDownloadAsync(bundle.ModelUrl);
+            string modelPath = await downloader.MayDownloadAsync(bundle.ModelUrl, bundle.Hash);
 
             if (settings.Model == "QuartzNet15x5Base-En")
             {
-                string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
+                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
                 using var recognizer = new SpeechRecognizer(modelPath);
@@ -41,6 +48,10 @@ namespace NeMoOnnxSharp
                     string predictText = recognizer.Recognize(waveform);
                     Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
                 }
+            }
+            else
+            {
+                throw new InvalidDataException();
             }
         }
     }
