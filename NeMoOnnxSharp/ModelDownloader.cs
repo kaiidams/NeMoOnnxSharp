@@ -4,13 +4,14 @@ using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp
 {
     public class ModelDownloader
     {
-        private HttpClient _client;
-        private string _cacheDirectoryPath;
+        private readonly HttpClient _client;
+        private readonly string _cacheDirectoryPath;
 
         public ModelDownloader(HttpClient client, string cacheDirectoryPath)
         {
@@ -20,19 +21,15 @@ namespace NeMoOnnxSharp
 
         private string GetFileChecksum(string path)
         {
-            using (SHA256 sha256 = SHA256.Create())
+            using SHA256 sha256 = SHA256.Create();
+            using var stream = File.OpenRead(path);
+            var hashValue = sha256.ComputeHash(stream);
+            var sb = new StringBuilder();
+            foreach (var value in hashValue)
             {
-                using (var stream = File.OpenRead(path))
-                {
-                    var hashValue = sha256.ComputeHash(stream);
-                    var sb = new StringBuilder();
-                    foreach (var value in hashValue)
-                    {
-                        sb.Append($"{value:x2}");
-                    }
-                    return sb.ToString();
-                }
+                sb.Append($"{value:x2}");
             }
+            return sb.ToString();
         }
 
         private bool CheckCacheFile(string cacheFilePath, string expectedChecksum)
@@ -48,7 +45,7 @@ namespace NeMoOnnxSharp
             return false;
         }
 
-        public string MayDownload()
+        public async Task<string> MayDownloadAsync(string url)
         {
             Directory.CreateDirectory(_cacheDirectoryPath);
 
@@ -59,7 +56,11 @@ namespace NeMoOnnxSharp
                 Console.WriteLine("Cache hit");
                 return cacheFilePath;
             }
-            throw new Exception();
+            using var response = await _client.GetAsync(url);
+            using var inputStream = await response.Content.ReadAsStreamAsync();
+            using var outputStream = File.OpenWrite(cacheFilePath);
+            await inputStream.CopyToAsync(outputStream);
+            return cacheFilePath;
         }
     }
 }

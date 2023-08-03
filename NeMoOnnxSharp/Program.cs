@@ -1,23 +1,28 @@
 ﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             IConfiguration config = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
                 .AddEnvironmentVariables()
                 .Build();
+            var settings = config.GetRequiredSection("Settings").Get<Settings>();
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             string cacheDirectoryPath = Path.Combine(appDirPath, "Cache");
-            ModelDownloader downloader = new ModelDownloader(null, cacheDirectoryPath);
-            string modelPath = downloader.MayDownload();
+            var bundle = ModelBundle.GetBundle(settings.Model);
+            Console.WriteLine("{0}", bundle.ModelUrl);
+            using var httpClient = new HttpClient();
+            var downloader = new ModelDownloader(httpClient, cacheDirectoryPath);
+            string modelPath = await downloader.MayDownloadAsync(bundle.ModelUrl);
 
-            var settings = config.GetRequiredSection("Settings").Get<Settings>();
             if (settings.Model == "QuartzNet15x5Base-En")
             {
                 string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
