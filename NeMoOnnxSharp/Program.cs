@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿// Copyright (c) Katsuya Iida.  All Rights Reserved.
+// See LICENSE in the project root for license information.
+
+using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
 using System.Net.Http;
