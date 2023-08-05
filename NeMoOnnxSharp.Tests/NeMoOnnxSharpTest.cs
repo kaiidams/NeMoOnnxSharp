@@ -68,7 +68,7 @@ namespace NeMoOnnxSharp.Tests
                 melMinHz: 0.0,
                 melMaxHz: 0.0,
                 htk: true,
-                melNormalize: null,
+                melNormalize: MelNormalizeType.None,
                 logOffset: 1e-6,
                 postNormalize: false);
         }

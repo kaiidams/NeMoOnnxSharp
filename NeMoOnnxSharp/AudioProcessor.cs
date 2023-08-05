@@ -7,7 +7,7 @@ namespace NeMoOnnxSharp
 {
     public class AudioProcessor
     {
-        private enum WindowType
+        private enum FrameType
         {
             None,
             Preemph,
@@ -15,43 +15,21 @@ namespace NeMoOnnxSharp
             CenterPreemph
         }
 
-        private enum MelType
-        {
-            None,
-            Slaney
-        }
-
-        private static WindowType GetWindowType(bool center, double preemph)
+        private static FrameType GetFrameType(bool center, double preemph)
         {
             if (preemph == 0.0)
             {
-                return center ? WindowType.Center : WindowType.None;
+                return center ? FrameType.Center : FrameType.None;
             }
             else
             {
-                return center ? WindowType.CenterPreemph : WindowType.Preemph;
-            }
-        }
-
-        private static MelType GetMelType(string melNormalize)
-        {
-            if (string.IsNullOrWhiteSpace(melNormalize))
-            {
-                return MelType.None;
-            }
-            if (melNormalize == "slaney")
-            {
-                return MelType.Slaney;
-            }
-            else
-            {
-                throw new ArgumentException();
+                return center ? FrameType.CenterPreemph : FrameType.Preemph;
             }
         }
 
         protected readonly double _sampleRate;
         protected readonly double[] _window;
-        private readonly WindowType _windowType;
+        private readonly FrameType _frameType;
         protected readonly int _hopLength;
         private readonly double _preNormalize;
         protected readonly double _preemph;
@@ -60,7 +38,7 @@ namespace NeMoOnnxSharp
         protected readonly double[] _temp2;
         protected readonly int _fftLength;
         protected readonly int _nMelBands;
-        private readonly MelType _melType;
+        private readonly MelNormalizeType _melNormalizeType;
         private readonly int _power;
         private readonly double _logOffset;
         private readonly bool _logOutput;
@@ -80,7 +58,7 @@ namespace NeMoOnnxSharp
             double melMinHz = 0.0,
             double melMaxHz = 0.0,
             bool htk = false,
-            string melNormalize = "slaney",
+            MelNormalizeType melNormalize = MelNormalizeType.Slaney,
             int power = 2,
             bool logOutput = true,
             double logOffset = 1e-6,
@@ -97,11 +75,11 @@ namespace NeMoOnnxSharp
             // int winLength = (int)(sampleRate * windowSize); // 320
             if (windowLength == 0) windowLength = fftLength;
             _window = Window.MakeWindow(window, windowLength);
-            _windowType = GetWindowType(center, preemph);
+            _frameType = GetFrameType(center, preemph);
             _hopLength = hopLength;
             // _hopLength = (int)(sampleRate * windowStride); // 160
             _melBands = MelBands.MakeMelBands(melMinHz, melMaxHz, nMelBands, htk);
-            _melType = GetMelType(melNormalize);
+            _melNormalizeType = melNormalize;
             _temp1 = new double[fftLength];
             _temp2 = new double[fftLength];
             _fftLength = fftLength;
@@ -226,12 +204,12 @@ namespace NeMoOnnxSharp
         private void ToMelSpectrogram(double[] spec, float[] melspec, int melspecOffset)
         {
             if (!_logOutput) throw new NotImplementedException();
-            switch (_melType)
+            switch (_melNormalizeType)
             {
-                case MelType.None:
+                case MelNormalizeType.None:
                     ToMelSpectrogramNone(spec, melspec, melspecOffset);
                     break;
-                case MelType.Slaney:
+                case MelNormalizeType.Slaney:
                     ToMelSpectrogramSlaney(spec, melspec, melspecOffset);
                     break;
             }
@@ -301,17 +279,17 @@ namespace NeMoOnnxSharp
 
         protected void ReadFrame(short[] waveform, int offset, double scale, double[] frame)
         {
-            switch (_windowType)
+            switch (_frameType)
             {
-                case WindowType.None:
+                case FrameType.None:
                     ReadFrameNone(waveform, offset, scale, frame);
                     break;
-                case WindowType.Preemph:
+                case FrameType.Preemph:
                     throw new NotImplementedException();
-                case WindowType.Center:
+                case FrameType.Center:
                     ReadFrameCenter(waveform, offset, scale, frame);
                     break;
-                case WindowType.CenterPreemph:
+                case FrameType.CenterPreemph:
                     ReadFrameCenterPreemphasis(waveform, offset, scale, frame);
                     break;
             }

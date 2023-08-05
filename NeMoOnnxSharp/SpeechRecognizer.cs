@@ -37,7 +37,7 @@ namespace NeMoOnnxSharp
                 melMinHz: 0.0,
                 melMaxHz: 0.0,
                 htk: false,
-                melNormalize: "slaney",
+                melNormalize: MelNormalizeType.Slaney,
                 logOffset: Math.Pow(2, -24),
                 postNormalize: true,
                 postNormalizeOffset: 1e-5);
