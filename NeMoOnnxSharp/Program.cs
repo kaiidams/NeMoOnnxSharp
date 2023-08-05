@@ -33,7 +33,8 @@ namespace NeMoOnnxSharp
             Console.WriteLine("{0}", bundle.ModelUrl);
             using var httpClient = new HttpClient();
             var downloader = new ModelDownloader(httpClient, cacheDirectoryPath);
-            string modelPath = await downloader.MayDownloadAsync(bundle.ModelUrl, bundle.Hash);
+            string fileName = GetFileNameFromUrl(bundle.ModelUrl);
+            string modelPath = await downloader.MayDownloadAsync(fileName, bundle.ModelUrl, bundle.Hash);
 
             if (settings.Model == "QuartzNet15x5Base-En")
             {
@@ -49,7 +50,7 @@ namespace NeMoOnnxSharp
                     string name = parts[0];
                     string targetText = parts[1];
                     string waveFile = Path.Combine(inputDirPath, name);
-                    var waveform = WaveFile.ReadWav(waveFile, 16000, true);
+                    var waveform = WaveFile.ReadWAV(waveFile, 16000);
                     string predictText = recognizer.Recognize(waveform);
                     Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
                 }
@@ -68,7 +69,7 @@ namespace NeMoOnnxSharp
                     string name = parts[0];
                     string targetText = parts[1];
                     string waveFile = Path.Combine(inputDirPath, name);
-                    var waveform = WaveFile.ReadWav(waveFile, 16000, true);
+                    var waveform = WaveFile.ReadWAV(waveFile, 16000);
                     string binFile = Path.Combine(inputDirPath, name.Replace(".wav", ".bin"));
                     var buffer = ReadBinaryBuffer(binFile);
                     var x = preprocessor.Process(waveform);
@@ -94,6 +95,21 @@ namespace NeMoOnnxSharp
             int n = reader.ReadInt32();
             var bytes = reader.ReadBytes(m * n * 4);
             return MemoryMarshal.Cast<byte, float>(bytes).ToArray();
+        }
+
+        private static string GetFileNameFromUrl(string url)
+        {
+            int slashIndex = url.LastIndexOf("/");
+            if (slashIndex == -1)
+            {
+                throw new ArgumentException();
+            }
+            string fileName = url.Substring(slashIndex + 1);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                throw new ArgumentException();
+            }
+            return fileName;
         }
     }
 }

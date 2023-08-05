@@ -10,28 +10,43 @@ using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp
 {
-    class AudioFeatureBuffer
+    internal class AudioFeatureBuffer
     {
-        public const int InputSamplingRate = 16000;
-
-        private readonly AudioFeatureExtractor _mfcc;
+        private readonly AudioProcessor _processor;
         private readonly int _stftHopLength;
         private readonly int _stftWindowLength;
         private readonly int _nMelBands;
+        private readonly double _audioScale;
 
-        private readonly float[] _waveformBuffer;
+        private readonly short[] _waveformBuffer;
         private int _waveformCount;
         private readonly float[] _outputBuffer;
         private int _outputCount;
 
         public AudioFeatureBuffer(int stftHopLength = 160, int stftWindowLength = 400, int nMelBands = 64)
         {
-            _mfcc = new AudioFeatureExtractor();
+            _processor = new AudioProcessor(
+                sampleRate: 16000,
+                window: "hann",
+                windowLength: 400,
+                hopLength: 160,
+                fftLength: 512,
+                preNormalize: 0.8,
+                preemph: 0.0,
+                center: false,
+                nMelBands: 64,
+                melMinHz: 0.0,
+                melMaxHz: 0.0,
+                htk: true,
+                melNormalize: null,
+                logOffset: 1e-6,
+                postNormalize: false);
             _stftHopLength = stftHopLength;
             _stftWindowLength = stftWindowLength;
             _nMelBands = nMelBands;
+            _audioScale = 0.5 / short.MaxValue;
 
-            _waveformBuffer = new float[2 * _stftHopLength + _stftWindowLength];
+            _waveformBuffer = new short[2 * _stftHopLength + _stftWindowLength];
             _waveformCount = 0;
             _outputBuffer = new float[_nMelBands * (_stftWindowLength + _stftHopLength)];
             _outputCount = 0;
@@ -40,30 +55,7 @@ namespace NeMoOnnxSharp
         public int OutputCount { get { return _outputCount; } }
         public float[] OutputBuffer { get { return _outputBuffer; } }
 
-        public float[] Resample(float[] waveform, int sampleRate)
-        {
-            if (sampleRate == InputSamplingRate)
-            {
-                return waveform;
-            }
-            else
-            {
-                int toLen = (int)(waveform.Length * ((double)InputSamplingRate / sampleRate));
-                float stepRate = ((float)sampleRate) / InputSamplingRate;
-                float[] toWaveform = new float[toLen];
-                for (int toIndex = 0; toIndex < toWaveform.Length; toIndex++)
-                {
-                    int fromIndex = (int)(toIndex * stepRate);
-                    if (fromIndex < waveform.Length)
-                    {
-                        toWaveform[toIndex] = waveform[fromIndex];
-                    }
-                }
-                return toWaveform;
-            }
-        }
-
-        public int Write(float[] waveform, int offset, int count)
+        public int Write(short[] waveform, int offset, int count)
         {
             int written = 0;
 
@@ -78,7 +70,7 @@ namespace NeMoOnnxSharp
                 int wavebufferOffset = 0;
                 while (wavebufferOffset + _stftWindowLength < _waveformCount)
                 {
-                    _mfcc.MelSpectrogram(_waveformBuffer, wavebufferOffset, _outputBuffer, _outputCount);
+                    _processor.MelSpectrogramStep(_waveformBuffer, wavebufferOffset, _audioScale, _outputBuffer, _outputCount);
                     _outputCount += _nMelBands;
                     wavebufferOffset += _stftHopLength;
                 }
@@ -100,7 +92,7 @@ namespace NeMoOnnxSharp
                 {
                     return written;
                 }
-                _mfcc.MelSpectrogram(waveform, offset + written, _outputBuffer, _outputCount);
+                _processor.MelSpectrogramStep(waveform, offset + written, _audioScale, _outputBuffer, _outputCount);
                 _outputCount += _nMelBands;
                 written += _stftHopLength;
             }

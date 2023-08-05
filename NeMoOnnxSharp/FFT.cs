@@ -9,32 +9,12 @@ namespace NeMoOnnxSharp
 {
     public static class FFT
     {
-        private static int SwapIndex(int i)
-        {
-            return (i >> 8) & 0x01
-                 | (i >> 6) & 0x02
-                 | (i >> 4) & 0x04
-                 | (i >> 2) & 0x08
-                 | (i) & 0x10
-                 | (i << 2) & 0x20
-                 | (i << 4) & 0x40
-                 | (i << 6) & 0x80
-                 | (i << 8) & 0x100;
-        }
-
         public static void CFFT(double[] xr, double[] xi, int N)
         {
             double[] t = xi;
             xi = xr;
             xr = t;
-            for (int i = 0; i < N; i++)
-            {
-                xr[i] = xi[SwapIndex(i)];
-            }
-            for (int i = 0; i < N; i++)
-            {
-                xi[i] = 0.0;
-            }
+            Swap(xr, xi, N);
             for (int n = 1; n < N; n *= 2)
             {
                 for (int j = 0; j < N; j += n * 2)
@@ -73,29 +53,102 @@ namespace NeMoOnnxSharp
             }
         }
 
-#if false
-        private static void CFFTRef(double[] xr, double[] xi, int N)
+        private static void Swap(double[] xr, double[] xi, int N)
         {
-            double[] yr = new double[N];
-            double[] yi = new double[N];
-            for (int i = 0; i < N; i++)
+            if (N == 256)
             {
-                double vr = 0.0;
-                double vi = 0.0;
-                for (int k = 0; k < N; k++)
-                {
-                    vr += Math.Cos(-2 * Math.PI * k * i / N) * xr[k];
-                    vi += Math.Sin(-2 * Math.PI * k * i / N) * xr[k];
-                }
-                yr[i] = vr;
-                yi[i] = vi;
+                Swap256(xr, xi);
+            }
+            else if (N == 512)
+            {
+                Swap512(xr, xi);
+            }
+            else if (N == 1024)
+            {
+                Swap1024(xr, xi);
+            }
+            else if (N == 2048)
+            {
+                Swap2048(xr, xi);
+            }
+            else
+            {
+                throw new ArgumentException("Only 256, 512, 1024 or 2048 is supported for N");
             }
             for (int i = 0; i < N; i++)
             {
-                xr[i] = yr[i];
-                xi[i] = yi[i];
+                xi[i] = 0.0;
             }
         }
-#endif
+
+        private static void Swap256(double[] xr, double[] xi)
+        {
+            for (int i = 0; i < 256; i++)
+            {
+                int j = ((i >> 7) & 0x01)
+                 + ((i >> 5) & 0x02)
+                 + ((i >> 3) & 0x04)
+                 + ((i >> 1) & 0x08)
+                 + ((i << 1) & 0x10)
+                 + ((i << 3) & 0x20)
+                 + ((i << 5) & 0x40)
+                 + ((i << 7) & 0x80);
+                xr[i] = xi[j];
+            }
+        }
+
+        private static void Swap512(double[] xr, double[] xi)
+        {
+            for (int i = 0; i < 512; i++)
+            {
+                int j = ((i >> 8) & 0x01)
+                 + ((i >> 6) & 0x02)
+                 + ((i >> 4) & 0x04)
+                 + ((i >> 2) & 0x08)
+                 + ((i) & 0x10)
+                 + ((i << 2) & 0x20)
+                 + ((i << 4) & 0x40)
+                 + ((i << 6) & 0x80)
+                 + ((i << 8) & 0x100);
+                xr[i] = xi[j];
+            }
+        }
+
+        private static void Swap1024(double[] xr, double[] xi)
+        {
+            for (int i = 0; i < 1024; i++)
+            {
+                int j = ((i >> 9) & 0x01)
+                 + ((i >> 7) & 0x02)
+                 + ((i >> 5) & 0x04)
+                 + ((i >> 3) & 0x08)
+                 + ((i >> 1) & 0x10)
+                 + ((i << 1) & 0x20)
+                 + ((i << 3) & 0x40)
+                 + ((i << 5) & 0x80)
+                 + ((i << 7) & 0x100)
+                 + ((i << 9) & 0x200);
+                xr[i] = xi[j];
+            }
+        }
+
+        private static void Swap2048(double[] xr, double[] xi)
+        {
+            for (int i = 0; i < 2048; i++)
+            {
+                int j = ((i >> 10) & 0x01)
+                 + ((i >> 8) & 0x02)
+                 + ((i >> 6) & 0x04)
+                 + ((i >> 4) & 0x08)
+                 + ((i >> 2) & 0x10)
+                 + ((i) & 0x20)
+                 + ((i << 2) & 0x40)
+                 + ((i << 4) & 0x80)
+                 + ((i << 6) & 0x100)
+                 + ((i << 8) & 0x200)
+                 + ((i << 10) & 0x400);
+                xr[i] = xi[j];
+            }
+        }
     }
 }

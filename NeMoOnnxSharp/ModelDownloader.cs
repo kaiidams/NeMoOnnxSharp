@@ -13,12 +13,12 @@ namespace NeMoOnnxSharp
 {
     public class ModelDownloader
     {
-        private readonly HttpClient _client;
-        private readonly string _cacheDirectoryPath;
+        private HttpClient _httpClient;
+        private string _cacheDirectoryPath;
 
-        public ModelDownloader(HttpClient client, string cacheDirectoryPath)
+        public ModelDownloader(HttpClient httpClient, string cacheDirectoryPath)
         {
-            _client = client;
+            _httpClient = httpClient;
             _cacheDirectoryPath = cacheDirectoryPath;
         }
 
@@ -39,7 +39,8 @@ namespace NeMoOnnxSharp
         {
             if (File.Exists(cacheFilePath))
             {
-                if (GetFileChecksum(cacheFilePath) == expectedChecksum)
+                string checksum = GetFileChecksum(cacheFilePath);
+                if (string.Compare(checksum, expectedChecksum, true) == 0)
                 {
                     return true;
                 }
@@ -48,37 +49,69 @@ namespace NeMoOnnxSharp
             return false;
         }
 
-        public async Task<string> MayDownloadAsync(string url, string expectedChecksum)
+        private void ShowProgress(long progress, long? total)
+        {
+            if (total.HasValue)
+            {
+                Console.Write("\rDownloading... [{0}/{1} bytes]", progress, total);
+            }
+            else
+            {
+                Console.Write("\rDownloading... [{0} bytes]", progress);
+            }
+        }
+
+        public async Task<string> MayDownloadAsync(string fileName, string url, string sha256)
         {
             Directory.CreateDirectory(_cacheDirectoryPath);
-            string fileName = GetFileNameFromUrl(url);
 
             string cacheFilePath = Path.Combine(_cacheDirectoryPath, fileName);
-            if (CheckCacheFile(cacheFilePath, expectedChecksum))
+            if (CheckCacheFile(cacheFilePath, sha256))
             {
-                Console.WriteLine("Cache hit");
-                return cacheFilePath;
+                Console.WriteLine("Using cached `{0}'.", fileName);
             }
-            using var response = await _client.GetAsync(url);
-            using var inputStream = await response.Content.ReadAsStreamAsync();
-            using var outputStream = File.OpenWrite(cacheFilePath);
-            await inputStream.CopyToAsync(outputStream);
+            else
+            {
+                await Download(url, cacheFilePath);
+                if (!CheckCacheFile(cacheFilePath, sha256))
+                {
+                    File.Delete(cacheFilePath);
+                    throw new InvalidDataException();
+                }
+            }
             return cacheFilePath;
         }
 
-        private static string GetFileNameFromUrl(string url)
+        private async Task Download(string url, string path)
         {
-            int slashIndex = url.LastIndexOf("/");
-            if (slashIndex == -1)
+            using (var response = await _httpClient.GetAsync(url))
             {
-                throw new ArgumentException();
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new InvalidDataException();
+                }
+                long? contentLength = response.Content.Headers.ContentLength;
+                using (var reader = await response.Content.ReadAsStreamAsync())
+                {
+                    using (var writer = File.OpenWrite(path))
+                    {
+                        var lastDateTime = DateTime.UtcNow;
+                        byte[] buffer = new byte[4096];
+                        int bytesRead;
+                        while ((bytesRead = await reader.ReadAsync(buffer, 0, buffer.Length)) != 0)
+                        {
+                            await writer.WriteAsync(buffer, 0, bytesRead);
+                            var currentDateTime = DateTime.UtcNow;
+                            if ((lastDateTime - currentDateTime).Seconds >= 1)
+                            {
+                                lastDateTime = currentDateTime;
+                                ShowProgress(reader.Position, contentLength);
+                            }
+                        }
+                    }
+                }
             }
-            string fileName = url.Substring(slashIndex + 1);
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                throw new ArgumentException();
-            }
-            return fileName;
+            Console.WriteLine();
         }
     }
 }
