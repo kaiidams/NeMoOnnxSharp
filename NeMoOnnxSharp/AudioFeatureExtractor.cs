@@ -27,7 +27,7 @@ namespace NeMoOnnxSharp
                 melMaxHz = sampleRate / 2;
             }
             _sampleRate = sampleRate;
-            _window = Window.MakeWindow("hann", stftWindowLength);
+            _window = Window.MakeWindow(WindowFunction.Hann, stftWindowLength);
             _melBands = MakeMelBands(melMinHz, melMaxHz, nMelBands);
             _temp1 = new double[stftLength];
             _temp2 = new double[stftLength];

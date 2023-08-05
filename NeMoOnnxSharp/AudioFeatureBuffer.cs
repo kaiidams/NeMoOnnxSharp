@@ -27,7 +27,7 @@ namespace NeMoOnnxSharp
         {
             _processor = new AudioProcessor(
                 sampleRate: 16000,
-                window: "hann",
+                window: WindowFunction.Hann,
                 windowLength: 400,
                 hopLength: 160,
                 fftLength: 512,

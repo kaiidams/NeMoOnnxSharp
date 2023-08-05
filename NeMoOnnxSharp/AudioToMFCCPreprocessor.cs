@@ -61,7 +61,7 @@ namespace NeMoOnnxSharp
             {
                 nFFT = (int)Math.Pow(2, Math.Ceiling(Math.Log2(_winLength)));
             }
-            _window = Window.MakeWindow("hann", _winLength);
+            _window = Window.MakeWindow(WindowFunction.Hann, _winLength);
             _melBands = MakeMelBands(fMin, fMax, nMels);
             _nMFCC = nMFCC;
             _temp1 = new double[nFFT];

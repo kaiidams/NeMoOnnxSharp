@@ -69,7 +69,7 @@ namespace NeMoOnnxSharp
 
         public AudioProcessor(
             int sampleRate = 16000,
-            string window = "hann",
+            WindowFunction window = WindowFunction.Hann,
             int windowLength = 0,
             int hopLength = 512,
             int fftLength = 2048,

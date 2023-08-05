@@ -57,7 +57,7 @@ namespace NeMoOnnxSharp.Tests
             waveform = WaveFile.ReadWAV(waveFile, SampleRate);
             processor = new AudioProcessor(
                 sampleRate: SampleRate,
-                window: "hann",
+                window: WindowFunction.Hann,
                 windowLength: 400,
                 hopLength: 160,
                 fftLength: 512,

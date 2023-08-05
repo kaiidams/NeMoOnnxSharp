@@ -9,9 +9,9 @@ namespace NeMoOnnxSharp
 {
     public static class Window
     {
-        public static double[] MakeWindow(string window, int length)
+        public static double[] MakeWindow(WindowFunction function, int length)
         {
-            if (window == "hann")
+            if (function == WindowFunction.Hann)
             {
                 return MakeHannWindow(length);
             }
