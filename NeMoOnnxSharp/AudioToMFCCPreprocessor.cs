@@ -20,7 +20,8 @@ namespace NeMoOnnxSharp
         private readonly double[] _temp1;
         private readonly double[] _temp2;
         private readonly int _fftLength;
-        private readonly int _nMelBands;
+        private readonly int _nMels;
+        private readonly int _nMFCC;
         private readonly double _sampleRate;
         private readonly double _logOffset;
         private readonly double _stdOffset;
@@ -42,25 +43,31 @@ namespace NeMoOnnxSharp
 
         public AudioToMFCCPreprocessor(
             int sampleRate = 16000,
-            double windowSize = 0.025,
+            double windowSize = 0.02,
             double windowStride = 0.01,
-            int stftLength = 512,
-            int nMelBands = 64, double melMinHz = 0.0, double melMaxHz = 0.0,
-            double preemph = 0.97)
+            int nFFT = 0,
+            int nMels = 64, double fMin = 0.0, double fMax = 0.0,
+            int nMFCC = 64,
+            double preemph = 0.0)
         {
-            if (melMaxHz == 0.0)
-            {
-                melMaxHz = sampleRate / 2;
-            }
             _sampleRate = sampleRate;
+            if (fMax == 0.0)
+            {
+                fMax = sampleRate / 2;
+            }
             _winLength = (int)(sampleRate * windowSize); // 320
             _hopWidth = (int)(sampleRate * windowStride); // 160
+            if (nFFT == 0)
+            {
+                nFFT = (int)Math.Pow(2, Math.Ceiling(Math.Log2(_winLength)));
+            }
             _window = Window.MakeHannWindow(_winLength);
-            _melBands = MakeMelBands(melMinHz, melMaxHz, nMelBands);
-            _temp1 = new double[stftLength];
-            _temp2 = new double[stftLength];
-            _fftLength = stftLength;
-            _nMelBands = nMelBands;
+            _melBands = MakeMelBands(fMin, fMax, nMels);
+            _nMFCC = nMFCC;
+            _temp1 = new double[nFFT];
+            _temp2 = new double[nFFT];
+            _fftLength = nFFT;
+            _nMels = nMels;
             _preemph = preemph;
             _logOffset = Math.Pow(2, -24);
             _stdOffset = 1e-5;
@@ -69,32 +76,35 @@ namespace NeMoOnnxSharp
         public float[] Process(short[] waveform)
         {
             int audioSignalLength = waveform.Length / _hopWidth + 1;
-            float[] audioSignal = new float[_nMelBands * audioSignalLength]; 
+            float[] audioSignal = new float[_nMels * audioSignalLength]; 
             for (int i = 0; i < audioSignalLength; i++)
             {
-                MelSpectrogram(
+                MFCC(
                     waveform, _hopWidth * i, 
                     audioSignal, i, audioSignalLength);
             }
-            Normalize(audioSignal, audioSignalLength);
             return audioSignal;
         }
 
-        private void MelSpectrogram(
+        private void MFCC(
             short[] waveform, int waveformPos, 
-            float[] melspec, int melspecOffset, int melspecStride)
+            float[] mfcc, int melspecOffset, int melspecStride)
         {
             GetFrame(waveform, waveformPos, InvShortMaxValue, _temp1);
             FFT.CFFT(_temp1, _temp2, _fftLength);
             ToSquareMagnitude(_temp2, _temp1, _fftLength);
-            ToMelSpec(_temp2, melspec, melspecOffset, melspecStride);
+            ToMelSpec(_temp2, _temp1);
+            ToMFCC(_temp1, _temp2);
+            for (int i = 0; i < _nMFCC; i++) {
+                mfcc[melspecOffset + i * melspecStride] = (float)_temp2[i];
+            }
         }
 
         private void ToMelSpec(
             double[] spec,
-            float[] melspec, int melspecOffset, int melspecStride)
+            double[] melspec)
         {
-            for (int i = 0; i < _nMelBands; i++)
+            for (int i = 0; i < _nMels; i++)
             {
                 double startHz = _melBands[i];
                 double peakHz = _melBands[i + 1];
@@ -119,36 +129,13 @@ namespace NeMoOnnxSharp
                     v += spec[j] * r * 2 / (endHz - startHz);
                     j++;
                 }
-                melspec[melspecOffset + melspecStride * i] = (float)Math.Log(v + _logOffset);
+                melspec[i] = (float)Math.Log(v + _logOffset);
             }
         }
 
-        private void Normalize(float[] melspec, int melspecStride)
+        private void ToMFCC(double[] melspec, double[] mfcc)
         {
-            for (int i = 0; i < _nMelBands; i++)
-            {
-                double sum = 0;
-                for (int j = 0; j < melspecStride; j++)
-                {
-                    double v = melspec[melspecStride * i + j];
-                    sum += v;
-                }
-                float mean = (float)(sum / melspecStride);
-                sum = 0;
-                for (int j = 0; j < melspecStride; j++)
-                {
-                    double v = melspec[melspecStride * i + j] - mean;
-                    sum += v * v;
-                }
-                double std = Math.Sqrt(sum / melspecStride);
-                float invStd = (float)(1.0 / (_stdOffset + std));
-
-                for (int j = 0; j < melspecStride; j++)
-                {
-                    float v = melspec[melspecStride * i + j];
-                    melspec[melspecStride * i + j] = (v - mean) * invStd;
-                }
-            }
+            FFT.DCT2(melspec, mfcc, _nMFCC);
         }
 
         private void GetFrame(short[] waveform, int waveformPos, double scale, double[] frame)
@@ -163,7 +150,10 @@ namespace NeMoOnnxSharp
                     int k = i + waveformOffset;
                     double v = (k >= 0 && k < waveform.Length) ? waveform[k] : 0;
                     k--;
-                    if (k >= 0 && k < waveform.Length) v -= _preemph * waveform[k];
+                    if (_preemph > 0)
+                    {
+                        if (k >= 0 && k < waveform.Length) v -= _preemph * waveform[k];
+                    }
                     frame[i] = scale * v * _window[j];
                 }
                 else
@@ -225,10 +215,10 @@ namespace NeMoOnnxSharp
             return freq;
         }
 
-        static double[] MakeMelBands(double melMinHz, double melMaxHz, int nMelBanks)
+        static double[] MakeMelBands(double fMin, double fMax, int nMelBanks)
         {
-            double melMin = HzToMel(melMinHz);
-            double melMax = HzToMel(melMaxHz);
+            double melMin = HzToMel(fMin);
+            double melMax = HzToMel(fMax);
             double[] melBanks = new double[nMelBanks + 2];
             for (int i = 0; i < nMelBanks + 2; i++)
             {

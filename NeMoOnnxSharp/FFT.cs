@@ -59,6 +59,20 @@ namespace NeMoOnnxSharp
             }
         }
 
+        public static void DCT2(double[] xr, double[] xi, int N)
+        {
+            // TODO Implement more efficiently.
+            for (int i = 0; i < N; i++)
+            {
+                double s = 0;
+                for (int j = 0; j < N; j++)
+                {
+                    s += xr[j] * Math.Cos(Math.PI * (j + 0.5) * i / N);
+                }
+                xi[i] = i == 0 ? s / Math.Sqrt(N) : s / Math.Sqrt(N / 2);
+            }
+        }
+
 #if false
         private static void CFFTRef(double[] xr, double[] xi, int N)
         {

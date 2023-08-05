@@ -29,29 +29,6 @@ namespace NeMoOnnxSharp
                     Environment.SpecialFolderOption.DoNotVerify),
                 AppName);
             string cacheDirectoryPath = Path.Combine(appDirPath, "Cache");
-            if (settings.Model == "vad_marblenet")
-            {
-                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
-                string inputPath = Path.Combine(inputDirPath, "transcript.txt");
-
-                var preprocessor = new AudioToMFCCPreprocessor();
-                using var reader = File.OpenText(inputPath);
-                string line;
-                while ((line = reader.ReadLine()) != null)
-                {
-                    string[] parts = line.Split("|");
-                    string name = parts[0];
-                    string targetText = parts[1];
-                    string waveFile = Path.Combine(inputDirPath, name);
-                    var waveform = WaveFile.ReadWav(waveFile, 16000, true);
-                    string binFile = Path.Combine(inputDirPath, name.Replace(".wav", ".bin"));
-                    var buffer = ReadBinaryBuffer(binFile);
-                    var x = preprocessor.Process(waveform);
-                    Console.WriteLine("{0}", x.Length / 64.0);
-                }
-                return;
-            }
-
             var bundle = ModelBundle.GetBundle(settings.Model);
             Console.WriteLine("{0}", bundle.ModelUrl);
             using var httpClient = new HttpClient();
@@ -77,6 +54,32 @@ namespace NeMoOnnxSharp
                     Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
                 }
             }
+            else if (settings.Model == "vad_marblenet")
+            {
+                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
+                string inputPath = Path.Combine(inputDirPath, "transcript.txt");
+
+                var preprocessor = new AudioToMFCCPreprocessor(windowSize: 0.025);
+                using var reader = File.OpenText(inputPath);
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    string[] parts = line.Split("|");
+                    string name = parts[0];
+                    string targetText = parts[1];
+                    string waveFile = Path.Combine(inputDirPath, name);
+                    var waveform = WaveFile.ReadWav(waveFile, 16000, true);
+                    string binFile = Path.Combine(inputDirPath, name.Replace(".wav", ".bin"));
+                    var buffer = ReadBinaryBuffer(binFile);
+                    var x = preprocessor.Process(waveform);
+                    double totalDiff = 0.0f;
+                    for (int i = 0; i < buffer.Length; i++) {
+                        double diff = Math.Pow(x[i] - buffer[i], 2.0);
+                        totalDiff = Math.Max(diff, totalDiff);
+                    }
+                    Console.WriteLine(" {0}", totalDiff);
+                }
+            }
             else
             {
                 throw new InvalidDataException();
@@ -89,7 +92,6 @@ namespace NeMoOnnxSharp
             using var reader = new BinaryReader(stream, Encoding.UTF8, false);
             int m = reader.ReadInt32();
             int n = reader.ReadInt32();
-            Console.WriteLine("{0} {1}", m, n);
             var bytes = reader.ReadBytes(m * n * 4);
             return MemoryMarshal.Cast<byte, float>(bytes).ToArray();
         }
