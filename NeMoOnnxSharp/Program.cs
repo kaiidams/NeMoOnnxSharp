@@ -60,7 +60,7 @@ namespace NeMoOnnxSharp
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
-                var preprocessor = new AudioToMFCCPreprocessor(windowSize: 0.025);
+                using var vad = new FrameVAD(modelPath);
                 using var reader = File.OpenText(inputPath);
                 string line;
                 while ((line = reader.ReadLine()) != null)
@@ -70,15 +70,13 @@ namespace NeMoOnnxSharp
                     string targetText = parts[1];
                     string waveFile = Path.Combine(inputDirPath, name);
                     var waveform = WaveFile.ReadWAV(waveFile, 16000);
-                    string binFile = Path.Combine(inputDirPath, name.Replace(".wav", ".bin"));
-                    var buffer = ReadBinaryBuffer(binFile);
-                    var x = preprocessor.Process(waveform);
-                    double totalDiff = 0.0f;
-                    for (int i = 0; i < buffer.Length; i++) {
-                        double diff = Math.Pow(x[i] - buffer[i], 2.0);
-                        totalDiff = Math.Max(diff, totalDiff);
-                    }
-                    Console.WriteLine(" {0}", totalDiff);
+                    var rng = new Random();
+                    // for (int i = 0; i < waveform.Length; i++)
+                    // {
+                    //     waveform[i] = (short)((rng.Next() & 65535) - 32768);
+                    // }
+                    var predictText = vad.Transcribe(waveform);
+                    Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
                 }
             }
             else

@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 namespace NeMoOnnxSharp.Tests
 {
     [TestClass]
-    public class NeMoOnnxSharpTest
+    public class PreprocessorTest
     {
         private const int SampleRate = 16000;
         private const string SampleWAVSpeechFile = "61-70968-0000.wav";
@@ -50,7 +50,7 @@ namespace NeMoOnnxSharp.Tests
         short[] waveform;
         AudioProcessor processor;
 
-        public NeMoOnnxSharpTest()
+        public PreprocessorTest()
         {
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             string waveFile = Path.Combine(appDirPath, "Data", SampleWAVSpeechFile);
@@ -85,6 +85,29 @@ namespace NeMoOnnxSharp.Tests
         {
             var x = processor.MelSpectrogram(waveform);
             AssertMSE("melspectrogram.bin", x);
+        }
+
+        [TestMethod]
+        public void TestMFCC()
+        {
+            var processor = new AudioProcessor(
+                sampleRate: SampleRate,
+                window: WindowFunction.Hann,
+                windowLength: 400,
+                hopLength: 160,
+                fftLength: 512,
+                //preNormalize: 0.8,
+                preemph: 0.0,
+                center: true,
+                nMelBands: 64,
+                melMinHz: 0.0,
+                melMaxHz: 0.0,
+                htk: true,
+                melNormalize: MelNormalizeType.None,
+                nMFCC: 64,
+                logOffset: 1e-6,
+                postNormalize: false);
+            var x = processor.MFCC(waveform);
         }
 
         [TestMethod]

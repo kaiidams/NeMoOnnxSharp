@@ -44,6 +44,7 @@ namespace NeMoOnnxSharp
         private readonly bool _logOutput;
         private readonly bool _postNormalize;
         private readonly double _postNormalizeOffset;
+        private readonly int _nMFCC;
 
         public AudioProcessor(
             int sampleRate = 16000,
@@ -62,6 +63,7 @@ namespace NeMoOnnxSharp
             int power = 2,
             bool logOutput = true,
             double logOffset = 1e-6,
+            int nMFCC = 128,
             bool postNormalize = false,
             double postNormalizeOffset = 1e-5)
         {
@@ -87,6 +89,7 @@ namespace NeMoOnnxSharp
             _power = power;
             _logOutput = logOutput;
             _logOffset = logOffset;
+            _nMFCC = nMFCC;
             _postNormalize = postNormalize;
             _postNormalizeOffset = postNormalizeOffset;
         }
@@ -134,9 +137,36 @@ namespace NeMoOnnxSharp
             return output;
         }
 
+
+        public float[] MFCC(short[] waveform)
+        {
+            double scale = GetScaleFactor(waveform);
+            int outputStep = _nMFCC;
+            int outputLength = GetOutputLength(waveform);
+            float[] output = new float[outputStep * outputLength];
+            int waveformOffset = 0;
+            for (int outputOffset = 0; outputOffset < output.Length; outputOffset += outputStep)
+            {
+                MFCCStep(waveform, waveformOffset, scale, output, outputOffset);
+                waveformOffset += _hopLength;
+            }
+            if (_postNormalize)
+            {
+                PostNormalize(output, outputStep);
+            }
+            return output;
+        }
+
         private int GetOutputLength(short[] waveform)
         {
-            return (waveform.Length - _window.Length) / _hopLength + 1;
+            if (_frameType == FrameType.Center || _frameType == FrameType.CenterPreemph)
+            {
+                return (waveform.Length + _hopLength - 1) / _hopLength;
+            }
+            else
+            {
+                return (waveform.Length - _window.Length) / _hopLength + 1;
+            }
         }
 
         private double GetScaleFactor(short[] waveform)
@@ -179,7 +209,18 @@ namespace NeMoOnnxSharp
             ReadFrame(waveform, waveformOffset, scale, _temp1);
             FFT.CFFT(_temp1, _temp2, _fftLength);
             ToMagnitude(_temp2, _temp1, _fftLength);
-            ToMelSpectrogram(_temp2, output, outputOffset);
+            ToMelSpectrogram(_temp2, _temp1);
+            for (int i = 0; i < _nMelBands; i++) output[outputOffset + i] = (float)_temp1[i];
+        }
+
+        public void MFCCStep(short[] waveform, int waveformOffset, double scale, float[] output, int outputOffset)
+        {
+            ReadFrame(waveform, waveformOffset, scale, _temp1);
+            FFT.CFFT(_temp1, _temp2, _fftLength);
+            ToMagnitude(_temp2, _temp1, _fftLength);
+            ToMelSpectrogram(_temp2, _temp1);
+            FFT.DCT2(_temp1, _temp2, _nMFCC);
+            for (int i = 0; i < _nMelBands; i++) output[outputOffset + i] = (float)_temp2[i];
         }
 
         private void ToSpectrogram(double[] input, float[] output, int outputOffset, int outputSize)
@@ -201,21 +242,21 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private void ToMelSpectrogram(double[] spec, float[] melspec, int melspecOffset)
+        private void ToMelSpectrogram(double[] spec, Span<double> melspec)
         {
             if (!_logOutput) throw new NotImplementedException();
             switch (_melNormalizeType)
             {
                 case MelNormalizeType.None:
-                    ToMelSpectrogramNone(spec, melspec, melspecOffset);
+                    ToMelSpectrogramNone(spec, melspec);
                     break;
                 case MelNormalizeType.Slaney:
-                    ToMelSpectrogramSlaney(spec, melspec, melspecOffset);
+                    ToMelSpectrogramSlaney(spec, melspec);
                     break;
             }
         }
 
-        private void ToMelSpectrogramNone(double[] spec, float[] melspec, int melspecOffset)
+        private void ToMelSpectrogramNone(double[] spec, Span<double> melspec)
         {
             for (int i = 0; i < _nMelBands; i++)
             {
@@ -242,11 +283,11 @@ namespace NeMoOnnxSharp
                     v += spec[j] * r;
                     j++;
                 }
-                melspec[melspecOffset + i] = (float)Math.Log(v + _logOffset);
+                melspec[i] = (float)Math.Log(v + _logOffset);
             }
         }
 
-        private void ToMelSpectrogramSlaney(double[] spec, float[] melspec, int melspecOffset)
+        private void ToMelSpectrogramSlaney(double[] spec, Span<double> melspec)
         {
             for (int i = 0; i < _nMelBands; i++)
             {
@@ -273,7 +314,7 @@ namespace NeMoOnnxSharp
                     v += spec[j] * r * 2 / (endHz - startHz);
                     j++;
                 }
-                melspec[melspecOffset + i] = (float)Math.Log(v + _logOffset);
+                melspec[i] = (float)Math.Log(v + _logOffset);
             }
         }
 
@@ -309,12 +350,12 @@ namespace NeMoOnnxSharp
 
         private void ReadFrameCenter(short[] waveform, int offset, double scale, double[] frame)
         {
-            int frameOffset = (frame.Length - 1) / 2 - (_window.Length - 1) / 2;
+            int frameOffset = frame.Length / 2 - _window.Length / 2;
             for (int i = 0; i < frameOffset; i++)
             {
                 frame[i] = 0;
             }
-            int waveformOffset = offset - (_window.Length - 1) / 2;
+            int waveformOffset = offset - _window.Length / 2;
             for (int i = 0; i < _window.Length; i++)
             {
                 int k = i + waveformOffset;
