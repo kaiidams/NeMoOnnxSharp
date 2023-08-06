@@ -8,10 +8,12 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Net.Sockets;
+using System.Collections.Generic;
 
 namespace NeMoOnnxSharp
 {
-    internal class Program
+    internal static class Program
     {
         private static string AppName = "NeMoOnnxSharp";
 
@@ -57,6 +59,12 @@ namespace NeMoOnnxSharp
             }
             else if (settings.Model == "vad_marblenet")
             {
+                if (settings.Task == "socketaudio")
+                {
+                    RunSocketAudio(modelPath);
+                    return;
+                }
+
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
@@ -82,6 +90,33 @@ namespace NeMoOnnxSharp
             else
             {
                 throw new InvalidDataException();
+            }
+        }
+
+        private static void RunSocketAudio(string modelPath)
+        {
+            using var vad = new FrameVAD(modelPath);
+            using Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            socket.Connect("127.0.0.1", 17843);
+            Console.WriteLine("Connected");
+            byte[] responseBytes = new byte[1024];
+            var audioSignal = new List<short>();
+            while (true)
+            {
+                int bytesReceived = socket.Receive(responseBytes);
+                if (bytesReceived == 0) break;
+                if (bytesReceived % 2 != 0)
+                {
+                    // TODO
+                    throw new InvalidDataException();
+                }
+                audioSignal.AddRange(MemoryMarshal.Cast<byte, short>(responseBytes.AsSpan(0, bytesReceived)).ToArray());
+                if (audioSignal.Count > 16000)
+                {
+                    string text = vad.Transcribe(audioSignal.ToArray());
+                    Console.WriteLine("text: {0}", text);
+                    audioSignal.Clear();
+                }
             }
         }
 
