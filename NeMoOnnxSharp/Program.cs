@@ -15,7 +15,7 @@ namespace NeMoOnnxSharp
 {
     internal static class Program
     {
-        private static string AppName = "NeMoOnnxSharp";
+        private const string AppName = "NeMoOnnxSharp";
 
         static async Task Main(string[] args)
         {
@@ -62,6 +62,11 @@ namespace NeMoOnnxSharp
                 if (settings.Task == "socketaudio")
                 {
                     RunSocketAudio(modelPath);
+                    return;
+                }
+                else if (settings.Task == "streamaudio")
+                {
+                    RunFileStreamAudio(basePath, modelPath);
                     return;
                 }
 
@@ -118,6 +123,78 @@ namespace NeMoOnnxSharp
                     audioSignal.Clear();
                 }
             }
+        }
+
+        private static void RunFileStreamAudio(string basePath, string modelPath)
+        {
+            var stream = GetAllAudioStream(basePath);
+            var buffer = new AudioFeatureBuffer();
+            using var vad = new FrameVAD(modelPath);
+            byte[] responseBytes = new byte[1024];
+            var audioSignal = new List<short>();
+            int c = 0;
+
+            while (true)
+            {
+                int bytesReceived = stream.Read(responseBytes);
+                if (bytesReceived == 0) break;
+                if (bytesReceived % 2 != 0)
+                {
+                    // TODO
+                    throw new InvalidDataException();
+                }
+
+                var x = MemoryMarshal.Cast<byte, short>(responseBytes.AsSpan(0, bytesReceived)).ToArray();
+                for (int offset = 0; offset < x.Length;)
+                {
+                    int written = buffer.Write(x, offset, x.Length - offset);
+                    offset += written;
+                    while (buffer.OutputCount >= 16000 + 400)
+                    {
+                        var y = buffer.OutputCount;
+                        Console.Write(".");
+                        ++c;
+                        if (c % 60 == 0)
+                        {
+                            c = 0;
+                            Console.WriteLine();
+                        }
+                        buffer.ConsumeOutput(64);
+                    }
+
+                }
+                
+                if (false)
+                {
+                    audioSignal.AddRange(MemoryMarshal.Cast<byte, short>(responseBytes.AsSpan(0, bytesReceived)).ToArray());
+                    if (audioSignal.Count > 16000)
+                    {
+                        string text = vad.Transcribe(audioSignal.ToArray());
+                        Console.WriteLine("text: {0}", text);
+                        audioSignal.Clear();
+                    }
+                }
+            }
+        }
+
+        private static MemoryStream GetAllAudioStream(string basePath)
+        {
+            string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
+            string inputPath = Path.Combine(inputDirPath, "transcript.txt");
+            using var reader = File.OpenText(inputPath);
+            string line;
+            var stream = new MemoryStream();
+            while ((line = reader.ReadLine()) != null)
+            {
+                string[] parts = line.Split("|");
+                string name = parts[0];
+                string waveFile = Path.Combine(inputDirPath, name);
+                var waveform = WaveFile.ReadWAV(waveFile, 16000);
+                var bytes = MemoryMarshal.Cast<short, byte>(waveform);
+                stream.Write(bytes);
+            }
+            stream.Seek(0, SeekOrigin.Begin);
+            return stream;
         }
 
         private static float[] ReadBinaryBuffer(string path)

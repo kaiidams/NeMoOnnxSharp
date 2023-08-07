@@ -70,7 +70,7 @@ namespace NeMoOnnxSharp
                 int wavebufferOffset = 0;
                 while (wavebufferOffset + _stftWindowLength < _waveformCount)
                 {
-                    _processor.MelSpectrogramStep(_waveformBuffer, wavebufferOffset, _audioScale, _outputBuffer, _outputCount);
+                    _processor.MFCCStep(_waveformBuffer, wavebufferOffset, _audioScale, _outputBuffer, _outputCount);
                     _outputCount += _nMelBands;
                     wavebufferOffset += _stftHopLength;
                 }
@@ -92,7 +92,7 @@ namespace NeMoOnnxSharp
                 {
                     return written;
                 }
-                _processor.MelSpectrogramStep(waveform, offset + written, _audioScale, _outputBuffer, _outputCount);
+                _processor.MFCCStep(waveform, offset + written, _audioScale, _outputBuffer, _outputCount);
                 _outputCount += _nMelBands;
                 written += _stftHopLength;
             }
