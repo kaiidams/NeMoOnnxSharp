@@ -67,12 +67,12 @@ namespace NeMoOnnxSharp
             for (int j = 0; j + windowLength < waveform.Length; j += stepSize)
             {
                 var waveform2 = waveform.AsSpan(j, windowLength).ToArray();
-                var audioSignal = _processor.MFCC(waveform2);
-                audioSignal = Transpose(audioSignal, _nMelBands);
+                var processedSignal = _processor.MFCC(waveform2);
+                processedSignal = Transpose(processedSignal, _nMelBands);
                 var container = new List<NamedOnnxValue>();
                 var audioSignalData = new DenseTensor<float>(
-                    audioSignal,
-                    new int[3] { 1, _nMelBands, audioSignal.Length / _nMelBands });
+                    processedSignal,
+                    new int[3] { 1, _nMelBands, processedSignal.Length / _nMelBands });
                 container.Add(NamedOnnxValue.CreateFromTensor("audio_signal", audioSignalData));
                 using (var res = _inferSess.Run(container, new string[] { "logits" }))
                 {
@@ -81,6 +81,25 @@ namespace NeMoOnnxSharp
                     int score = (int)(10 / (1 + Math.Exp(scores[0] - scores[1])));
                     text += (scores[0] > scores[1]) ? "." : "X";
                 }
+            }
+            return text;
+        }
+
+        public string TranscribeStep(float[] processedSignal)
+        {
+            processedSignal = Transpose(processedSignal, _nMelBands);
+            var container = new List<NamedOnnxValue>();
+            var audioSignalData = new DenseTensor<float>(
+                processedSignal,
+                new int[3] { 1, _nMelBands, processedSignal.Length / _nMelBands });
+            container.Add(NamedOnnxValue.CreateFromTensor("audio_signal", audioSignalData));
+            string text;
+            using (var res = _inferSess.Run(container, new string[] { "logits" }))
+            {
+                var scoreTensor = res.First();
+                float[] scores = scoreTensor.AsTensor<float>().ToArray();
+                int score = (int)(10 / (1 + Math.Exp(scores[0] - scores[1])));
+                text = (scores[0] > scores[1]) ? _labels[0] : _labels[1];
             }
             return text;
         }

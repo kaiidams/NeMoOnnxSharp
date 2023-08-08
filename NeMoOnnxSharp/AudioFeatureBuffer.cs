@@ -25,6 +25,7 @@ namespace NeMoOnnxSharp
 
         public AudioFeatureBuffer(int stftHopLength = 160, int stftWindowLength = 400, int nMelBands = 64)
         {
+#if false
             _processor = new AudioProcessor(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
@@ -41,10 +42,30 @@ namespace NeMoOnnxSharp
                 melNormalize: MelNormalizeType.None,
                 logOffset: 1e-6,
                 postNormalize: false);
+#else
+            _processor = new AudioProcessor(
+                sampleRate: 16000,
+                window: WindowFunction.Hann,
+                windowLength: 400,
+                hopLength: 160,
+                fftLength: 512,
+                preNormalize: 0.0,
+                preemph: 0.0,
+                center: false,
+                nMelBands: 64,
+                nMFCC: 64,
+                melMinHz: 0.0,
+                melMaxHz: 0.0,
+                htk: true,
+                melNormalize: MelNormalizeType.None,
+                logOffset: 1e-6,
+                postNormalize: false);
+#endif
             _stftHopLength = stftHopLength;
             _stftWindowLength = stftWindowLength;
             _nMelBands = nMelBands;
-            _audioScale = 0.5 / short.MaxValue;
+            // _audioScale = 0.5 / short.MaxValue;
+            _audioScale = 1.0 / short.MaxValue;
 
             _waveformBuffer = new short[2 * _stftHopLength + _stftWindowLength];
             _waveformCount = 0;

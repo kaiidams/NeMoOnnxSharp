@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace NeMoOnnxSharp
 {
@@ -134,6 +135,9 @@ namespace NeMoOnnxSharp
             var audioSignal = new List<short>();
             int c = 0;
 
+            var sw = new Stopwatch();
+            sw.Reset();
+            sw.Start();
             while (true)
             {
                 int bytesReceived = stream.Read(responseBytes);
@@ -149,19 +153,21 @@ namespace NeMoOnnxSharp
                 {
                     int written = buffer.Write(x, offset, x.Length - offset);
                     offset += written;
-                    while (buffer.OutputCount >= 16000 + 400)
+                    int ws = (int)(16000 * 0.31 / 160 * 64);
+                    int ss = (int)(16000 * 0.01 / 160 * 64);
+                    while (buffer.OutputCount >= ws)
                     {
-                        var y = buffer.OutputCount;
-                        Console.Write(".");
+                        var y = buffer.OutputBuffer.AsSpan(0, ws);
+                        string text = vad.TranscribeStep(y.ToArray());
+                        Console.Write(text == "speech" ? "X" : ".");
                         ++c;
                         if (c % 60 == 0)
                         {
                             c = 0;
                             Console.WriteLine();
                         }
-                        buffer.ConsumeOutput(64);
+                        buffer.ConsumeOutput(ss);
                     }
-
                 }
                 
                 if (false)
@@ -175,6 +181,8 @@ namespace NeMoOnnxSharp
                     }
                 }
             }
+            sw.Stop();
+            Console.WriteLine("{0}/{1}", sw.ElapsedMilliseconds, stream.Position / 32000.0);
         }
 
         private static MemoryStream GetAllAudioStream(string basePath)
@@ -192,6 +200,7 @@ namespace NeMoOnnxSharp
                 var waveform = WaveFile.ReadWAV(waveFile, 16000);
                 var bytes = MemoryMarshal.Cast<short, byte>(waveform);
                 stream.Write(bytes);
+                stream.Write(new byte[32000]);
             }
             stream.Seek(0, SeekOrigin.Begin);
             return stream;
