@@ -8,8 +8,12 @@ using System.Text;
 
 namespace NeMoOnnxSharp
 {
-    public interface IAudioBuffer<T, S>
+    public interface IAudioFeatureBuffer<T, S>
     {
+        public int NumInputChannels { get; }
+        public int NumOutputChannels { get; }
+        public int HopLength { get; }
+        public int WindowLength { get; }
         public int OutputCount { get; }
         public S[] OutputBuffer { get; }
         public int Write(T[] waveform, int offset, int count);

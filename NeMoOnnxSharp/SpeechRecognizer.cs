@@ -16,7 +16,7 @@ namespace NeMoOnnxSharp
     {
         private const string Vocabulary = " abcdefghijklmnopqrstuvwxyz'_";
 
-        private readonly AudioProcessor _processor;
+        private readonly AudioToMelSpectrogramProcessor _processor;
         private readonly CharTokenizer _tokenizer;
         private readonly InferenceSession _inferSess;
         private readonly int _nMelBands;
@@ -24,7 +24,7 @@ namespace NeMoOnnxSharp
         private SpeechRecognizer()
         {
             _nMelBands = 64;
-            _processor = new AudioProcessor(
+            _processor = new AudioToMelSpectrogramProcessor(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
                 windowLength: 400,

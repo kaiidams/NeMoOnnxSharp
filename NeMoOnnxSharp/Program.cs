@@ -74,6 +74,23 @@ namespace NeMoOnnxSharp
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
+                var processor = new MFCCAudioProcessor(
+                    sampleRate: 16000,
+                    window: WindowFunction.Hann,
+                    windowLength: 400,
+                    hopLength: 160,
+                    fftLength: 512,
+                    preNormalize: 0.0,
+                    preemph: 0.0,
+                    center: false,
+                    nMelBands: 64,
+                    nMFCC: 64,
+                    melMinHz: 0.0,
+                    melMaxHz: 0.0,
+                    htk: true,
+                    melNormalize: MelNormalizeType.None,
+                    logOffset: 1e-6,
+                    postNormalize: false);
                 using var vad = new FrameVAD(modelPath);
                 using var reader = File.OpenText(inputPath);
                 string line;
@@ -129,7 +146,25 @@ namespace NeMoOnnxSharp
         private static void RunFileStreamAudio(string basePath, string modelPath)
         {
             var stream = GetAllAudioStream(basePath);
-            var buffer = new AudioFeatureBuffer();
+            var processor = new MFCCAudioProcessor(
+                sampleRate: 16000,
+                window: WindowFunction.Hann,
+                windowLength: 400,
+                hopLength: 160,
+                fftLength: 512,
+                preNormalize: 0.0,
+                preemph: 0.0,
+                center: false,
+                nMelBands: 64,
+                nMFCC: 64,
+                melMinHz: 0.0,
+                melMaxHz: 0.0,
+                htk: true,
+                melNormalize: MelNormalizeType.None,
+                logOffset: 1e-6,
+                postNormalize: false);
+            var buffer = new AudioFeatureBuffer<short, float>(
+                processor, audioScale: 1.0 / short.MaxValue);
             using var vad = new FrameVAD(modelPath);
             byte[] responseBytes = new byte[1024];
             var audioSignal = new List<short>();

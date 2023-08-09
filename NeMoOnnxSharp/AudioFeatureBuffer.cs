@@ -10,96 +10,75 @@ using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp
 {
-    internal class AudioFeatureBuffer : IAudioBuffer<short, float>
+    internal class AudioFeatureBuffer<T, S> : IAudioFeatureBuffer<T, S>
     {
-        private readonly AudioProcessor _processor;
-        private readonly int _stftHopLength;
-        private readonly int _stftWindowLength;
-        private readonly int _nMelBands;
+        private readonly IAudioProcessor<T, S> _processor;
+        private readonly int _numInputChannels;
+        private readonly int _numOutputChannels;
+        private readonly int _hopLength;
+        private readonly int _windowLength;
         private readonly double _audioScale;
-
-        private readonly short[] _waveformBuffer;
+        private readonly T[] _waveformBuffer;
         private int _waveformCount;
-        private readonly float[] _outputBuffer;
+        private readonly S[] _outputBuffer;
         private int _outputCount;
 
-        public AudioFeatureBuffer(int stftHopLength = 160, int stftWindowLength = 400, int nMelBands = 64)
+        public AudioFeatureBuffer(
+            IAudioProcessor<T, S> processor,
+            int hopLength = 160, int windowLength = 400,
+            double audioScale = 1.0,
+            int numOutputChannels = 64, int numOutputFrames = 1000)
         {
-#if false
-            _processor = new AudioProcessor(
-                sampleRate: 16000,
-                window: WindowFunction.Hann,
-                windowLength: 400,
-                hopLength: 160,
-                fftLength: 512,
-                preNormalize: 0.8,
-                preemph: 0.0,
-                center: false,
-                nMelBands: 64,
-                melMinHz: 0.0,
-                melMaxHz: 0.0,
-                htk: true,
-                melNormalize: MelNormalizeType.None,
-                logOffset: 1e-6,
-                postNormalize: false);
-#else
-            _processor = new AudioProcessor(
-                sampleRate: 16000,
-                window: WindowFunction.Hann,
-                windowLength: 400,
-                hopLength: 160,
-                fftLength: 512,
-                preNormalize: 0.0,
-                preemph: 0.0,
-                center: false,
-                nMelBands: 64,
-                nMFCC: 64,
-                melMinHz: 0.0,
-                melMaxHz: 0.0,
-                htk: true,
-                melNormalize: MelNormalizeType.None,
-                logOffset: 1e-6,
-                postNormalize: false);
-#endif
-            _stftHopLength = stftHopLength;
-            _stftWindowLength = stftWindowLength;
-            _nMelBands = nMelBands;
-            // _audioScale = 0.5 / short.MaxValue;
-            _audioScale = 1.0 / short.MaxValue;
-
-            _waveformBuffer = new short[2 * _stftHopLength + _stftWindowLength];
+            _processor = processor;
+            _hopLength = hopLength;
+            _windowLength = windowLength;
+            _audioScale = audioScale;
+            _numInputChannels = 1;
+            _numOutputChannels = numOutputChannels;
+            _waveformBuffer = new T[2 * _hopLength + _windowLength];
             _waveformCount = 0;
-            _outputBuffer = new float[_nMelBands * (_stftWindowLength + _stftHopLength)];
+            _outputBuffer = new S[_numOutputChannels * numOutputFrames];
             _outputCount = 0;
         }
 
-        public int OutputCount { get { return _outputCount; } }
-        public float[] OutputBuffer { get { return _outputBuffer; } }
+        public int NumInputChannels => _numInputChannels;
 
-        public int Write(Span<short> waveform)
+        public int NumOutputChannels => _numOutputChannels;
+
+        public int HopLength => _hopLength;
+
+        public int WindowLength => _windowLength;
+
+        public int OutputCount { get { return _outputCount; } }
+        public S[] OutputBuffer { get { return _outputBuffer; } }
+
+        public int Write(Span<T> waveform)
         {
             var x = waveform.ToArray();
             return Write(x, 0, x.Length);
         }
 
-        public int Write(short[] waveform, int offset, int count)
+        public int Write(T[] waveform, int offset, int count)
         {
             int written = 0;
 
             if (_waveformCount > 0)
             {
-                int needed = ((_waveformCount - 1) / _stftHopLength) * _stftHopLength + _stftWindowLength - _waveformCount;
+                int needed = ((_waveformCount - 1) / _hopLength) * _hopLength + _windowLength - _waveformCount;
                 written = Math.Min(needed, count);
 
                 Array.Copy(waveform, offset, _waveformBuffer, _waveformCount, written);
                 _waveformCount += written;
 
                 int wavebufferOffset = 0;
-                while (wavebufferOffset + _stftWindowLength < _waveformCount)
+                while (wavebufferOffset + _windowLength < _waveformCount)
                 {
-                    _processor.MFCCStep(_waveformBuffer, wavebufferOffset, _audioScale, _outputBuffer, _outputCount);
-                    _outputCount += _nMelBands;
-                    wavebufferOffset += _stftHopLength;
+                    _processor.ProcessFrame(
+                        _waveformBuffer.AsSpan(wavebufferOffset, _numInputChannels * _windowLength),
+                        _audioScale,
+                        _outputBuffer.AsSpan(_outputCount, _numOutputChannels));
+                    _outputCount += _numOutputChannels;
+                    wavebufferOffset += _hopLength;
                 }
 
                 if (written < needed)
@@ -110,18 +89,21 @@ namespace NeMoOnnxSharp
                 }
 
                 _waveformCount = 0;
-                written -= _stftWindowLength - _stftHopLength;
+                written -= _windowLength - _hopLength;
             }
 
-            while (written + _stftWindowLength < count)
+            while (written + _windowLength < count)
             {
-                if (_outputCount + _nMelBands >= _outputBuffer.Length)
+                if (_outputCount + _numOutputChannels >= _outputBuffer.Length)
                 {
                     return written;
                 }
-                _processor.MFCCStep(waveform, offset + written, _audioScale, _outputBuffer, _outputCount);
-                _outputCount += _nMelBands;
-                written += _stftHopLength;
+                _processor.ProcessFrame(
+                    waveform.AsSpan(offset + written, _numInputChannels * _windowLength),
+                    _audioScale,
+                    _outputBuffer.AsSpan(_outputCount, _numOutputChannels));
+                _outputCount += _numOutputChannels;
+                written += _hopLength;
             }
 
             Array.Copy(waveform, offset + written, _waveformBuffer, 0, count - written);

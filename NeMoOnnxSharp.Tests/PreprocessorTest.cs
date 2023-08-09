@@ -55,7 +55,7 @@ namespace NeMoOnnxSharp.Tests
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             string waveFile = Path.Combine(appDirPath, "Data", SampleWAVSpeechFile);
             waveform = WaveFile.ReadWAV(waveFile, SampleRate);
-            processor = new AudioProcessor(
+            processor = new MFCCAudioProcessor(
                 sampleRate: SampleRate,
                 window: WindowFunction.Hann,
                 windowLength: 400,
@@ -90,7 +90,7 @@ namespace NeMoOnnxSharp.Tests
         [TestMethod]
         public void TestMFCC()
         {
-            var processor = new AudioProcessor(
+            var processor = new MFCCAudioProcessor(
                 sampleRate: SampleRate,
                 window: WindowFunction.Hann,
                 windowLength: 400,
@@ -115,7 +115,7 @@ namespace NeMoOnnxSharp.Tests
         {
             int windowLength = 5;
             int fftLength = 9;
-            var processor = new AudioProcessor(
+            var processor = new MFCCAudioProcessor(
                 windowLength: windowLength,
                 fftLength: fftLength,
                 preemph: 0.0);

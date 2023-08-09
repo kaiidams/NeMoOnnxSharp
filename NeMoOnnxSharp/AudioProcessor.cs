@@ -5,7 +5,7 @@ using System;
 
 namespace NeMoOnnxSharp
 {
-    public class AudioProcessor
+    public abstract class AudioProcessor : IAudioProcessor<short, float>
     {
         private enum FrameType
         {
@@ -450,5 +450,7 @@ namespace NeMoOnnxSharp
                 }
             }
         }
+
+        public abstract void ProcessFrame(Span<short> input, double scale, Span<float> output);
     }
 }
