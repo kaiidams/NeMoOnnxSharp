@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp
 {
-    internal class AudioFeatureBuffer
+    internal class AudioFeatureBuffer : IAudioBuffer<short, float>
     {
         private readonly AudioProcessor _processor;
         private readonly int _stftHopLength;
@@ -75,6 +75,12 @@ namespace NeMoOnnxSharp
 
         public int OutputCount { get { return _outputCount; } }
         public float[] OutputBuffer { get { return _outputBuffer; } }
+
+        public int Write(Span<short> waveform)
+        {
+            var x = waveform.ToArray();
+            return Write(x, 0, x.Length);
+        }
 
         public int Write(short[] waveform, int offset, int count)
         {

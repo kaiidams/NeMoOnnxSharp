@@ -161,7 +161,7 @@ namespace NeMoOnnxSharp
                         string text = vad.TranscribeStep(y.ToArray());
                         Console.Write(text == "speech" ? "X" : ".");
                         ++c;
-                        if (c % 60 == 0)
+                        if (c % 50 == 0)
                         {
                             c = 0;
                             Console.WriteLine();
@@ -192,6 +192,7 @@ namespace NeMoOnnxSharp
             using var reader = File.OpenText(inputPath);
             string line;
             var stream = new MemoryStream();
+            stream.Write(new byte[32000]);
             while ((line = reader.ReadLine()) != null)
             {
                 string[] parts = line.Split("|");
