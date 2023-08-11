@@ -11,15 +11,19 @@ namespace NeMoOnnxSharp
 {
     public static class MelBands
     {
-        public static double[] MakeMelBands(double melMinHz, double melMaxHz, int nMelBanks, bool htk)
+        public static double[] MakeMelBands(double melMinHz, double melMaxHz, int nMelBanks, MelScale melScale)
         {
-            if (htk)
+            if (melScale == MelScale.HTK)
             {
                 return HTKMelBands.MakeMelBands(melMinHz, melMaxHz, nMelBanks);
             }
-            else
+            else if (melScale == MelScale.Slaney)
             {
                 return SlaneyMelBands.MakeMelBands(melMinHz, melMaxHz, nMelBanks);
+            }
+            else
+            {
+                throw new ArgumentException();
             }
         }
     }

@@ -20,7 +20,7 @@ namespace NeMoOnnxSharp
             double melMinHz = 0.0,
             double melMaxHz = 0.0,
             bool htk = false,
-            MelNormalizeType melNormalize = MelNormalizeType.Slaney,
+            MelNorm melNormalize = MelNorm.Slaney,
             int power = 2,
             bool logOutput = true,
             double logOffset = 1e-6,

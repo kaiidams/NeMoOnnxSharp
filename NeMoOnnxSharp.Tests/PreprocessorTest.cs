@@ -68,7 +68,7 @@ namespace NeMoOnnxSharp.Tests
                 melMinHz: 0.0,
                 melMaxHz: 0.0,
                 htk: true,
-                melNormalize: MelNormalizeType.None,
+                melNormalize: MelNorm.None,
                 logOffset: 1e-6,
                 postNormalize: false);
         }
@@ -103,7 +103,7 @@ namespace NeMoOnnxSharp.Tests
                 melMinHz: 0.0,
                 melMaxHz: 0.0,
                 htk: true,
-                melNormalize: MelNormalizeType.None,
+                melNormalize: MelNorm.None,
                 nMFCC: 64,
                 logOffset: 1e-6,
                 postNormalize: false);

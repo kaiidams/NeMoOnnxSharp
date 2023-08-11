@@ -88,7 +88,7 @@ namespace NeMoOnnxSharp
                     melMinHz: 0.0,
                     melMaxHz: 0.0,
                     htk: true,
-                    melNormalize: MelNormalizeType.None,
+                    melNormalize: MelNorm.None,
                     logOffset: 1e-6,
                     postNormalize: false);
                 using var vad = new FrameVAD(modelPath);
@@ -146,23 +146,18 @@ namespace NeMoOnnxSharp
         private static void RunFileStreamAudio(string basePath, string modelPath)
         {
             var stream = GetAllAudioStream(basePath);
-            var processor = new MFCCAudioProcessor(
+            var processor = new MFCC(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
-                windowLength: 400,
-                hopLength: 160,
-                fftLength: 512,
-                preNormalize: 0.0,
-                preemph: 0.0,
-                center: false,
-                nMelBands: 64,
+                winLength: 400,
+                nFFT: 512,
+                nMels: 64,
                 nMFCC: 64,
-                melMinHz: 0.0,
-                melMaxHz: 0.0,
-                htk: true,
-                melNormalize: MelNormalizeType.None,
-                logOffset: 1e-6,
-                postNormalize: false);
+                fMin: 0.0,
+                fMax: 0.0,
+                logMels: true,
+                melScale: MelScale.HTK,
+                melNorm: MelNorm.None);
             var buffer = new AudioFeatureBuffer<short, float>(
                 processor, audioScale: 1.0 / short.MaxValue);
             using var vad = new FrameVAD(modelPath);
@@ -227,7 +222,7 @@ namespace NeMoOnnxSharp
             using var reader = File.OpenText(inputPath);
             string line;
             var stream = new MemoryStream();
-            stream.Write(new byte[32000]);
+//            stream.Write(new byte[32000]);
             while ((line = reader.ReadLine()) != null)
             {
                 string[] parts = line.Split("|");

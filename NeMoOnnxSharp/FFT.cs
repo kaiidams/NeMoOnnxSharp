@@ -9,9 +9,9 @@ namespace NeMoOnnxSharp
 {
     public static class FFT
     {
-        public static void CFFT(double[] xr, double[] xi, int N)
+        public static void CFFT(Span<double> xr, Span<double> xi, int N)
         {
-            double[] t = xi;
+            Span<double> t = xi;
             xi = xr;
             xr = t;
             Swap(xr, xi, N);
@@ -39,7 +39,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        public static void DCT2(double[] xr, double[] xi, int N)
+        public static void DCT2(Span<double> xr, Span<double> xi, int N)
         {
             // TODO Implement more efficiently.
             for (int i = 0; i < N; i++)
@@ -53,7 +53,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private static void Swap(double[] xr, double[] xi, int N)
+        private static void Swap(Span<double> xr, Span<double> xi, int N)
         {
             if (N == 256)
             {
@@ -81,7 +81,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private static void Swap256(double[] xr, double[] xi)
+        private static void Swap256(Span<double> xr, Span<double> xi)
         {
             for (int i = 0; i < 256; i++)
             {
@@ -97,7 +97,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private static void Swap512(double[] xr, double[] xi)
+        private static void Swap512(Span<double> xr, Span<double> xi)
         {
             for (int i = 0; i < 512; i++)
             {
@@ -114,7 +114,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private static void Swap1024(double[] xr, double[] xi)
+        private static void Swap1024(Span<double> xr, Span<double> xi)
         {
             for (int i = 0; i < 1024; i++)
             {
@@ -132,7 +132,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private static void Swap2048(double[] xr, double[] xi)
+        private static void Swap2048(Span<double> xr, Span<double> xi)
         {
             for (int i = 0; i < 2048; i++)
             {

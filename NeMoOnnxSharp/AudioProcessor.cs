@@ -38,7 +38,7 @@ namespace NeMoOnnxSharp
         protected readonly double[] _temp2;
         protected readonly int _fftLength;
         protected readonly int _nMelBands;
-        private readonly MelNormalizeType _melNormalizeType;
+        private readonly MelNorm _melNormalizeType;
         private readonly int _power;
         private readonly double _logOffset;
         private readonly bool _logOutput;
@@ -59,7 +59,7 @@ namespace NeMoOnnxSharp
             double melMinHz = 0.0,
             double melMaxHz = 0.0,
             bool htk = false,
-            MelNormalizeType melNormalize = MelNormalizeType.Slaney,
+            MelNorm melNormalize = MelNorm.Slaney,
             int power = 2,
             bool logOutput = true,
             double logOffset = 1e-6,
@@ -80,7 +80,7 @@ namespace NeMoOnnxSharp
             _frameType = GetFrameType(center, preemph);
             _hopLength = hopLength;
             // _hopLength = (int)(sampleRate * windowStride); // 160
-            _melBands = MelBands.MakeMelBands(melMinHz, melMaxHz, nMelBands, htk);
+            _melBands = MelBands.MakeMelBands(melMinHz, melMaxHz, nMelBands, htk ? MelScale.HTK : MelScale.Slaney);
             _melNormalizeType = melNormalize;
             _temp1 = new double[fftLength];
             _temp2 = new double[fftLength];
@@ -247,10 +247,10 @@ namespace NeMoOnnxSharp
             if (!_logOutput) throw new NotImplementedException();
             switch (_melNormalizeType)
             {
-                case MelNormalizeType.None:
+                case MelNorm.None:
                     ToMelSpectrogramNone(spec, melspec);
                     break;
-                case MelNormalizeType.Slaney:
+                case MelNorm.Slaney:
                     ToMelSpectrogramSlaney(spec, melspec);
                     break;
             }

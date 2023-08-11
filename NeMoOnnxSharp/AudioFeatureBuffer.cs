@@ -12,7 +12,7 @@ namespace NeMoOnnxSharp
 {
     internal class AudioFeatureBuffer<T, S> : IAudioFeatureBuffer<T, S>
     {
-        private readonly IAudioProcessor<T, S> _processor;
+        private readonly IFrameTransform<T, S> _processor;
         private readonly int _numInputChannels;
         private readonly int _numOutputChannels;
         private readonly int _hopLength;
@@ -24,7 +24,7 @@ namespace NeMoOnnxSharp
         private int _outputCount;
 
         public AudioFeatureBuffer(
-            IAudioProcessor<T, S> processor,
+            IFrameTransform<T, S> processor,
             int hopLength = 160, int windowLength = 400,
             double audioScale = 1.0,
             int numOutputChannels = 64, int numOutputFrames = 1000)
@@ -73,9 +73,8 @@ namespace NeMoOnnxSharp
                 int wavebufferOffset = 0;
                 while (wavebufferOffset + _windowLength < _waveformCount)
                 {
-                    _processor.ProcessFrame(
+                    _processor.Transform(
                         _waveformBuffer.AsSpan(wavebufferOffset, _numInputChannels * _windowLength),
-                        _audioScale,
                         _outputBuffer.AsSpan(_outputCount, _numOutputChannels));
                     _outputCount += _numOutputChannels;
                     wavebufferOffset += _hopLength;
@@ -98,9 +97,8 @@ namespace NeMoOnnxSharp
                 {
                     return written;
                 }
-                _processor.ProcessFrame(
+                _processor.Transform(
                     waveform.AsSpan(offset + written, _numInputChannels * _windowLength),
-                    _audioScale,
                     _outputBuffer.AsSpan(_outputCount, _numOutputChannels));
                 _outputCount += _numOutputChannels;
                 written += _hopLength;
