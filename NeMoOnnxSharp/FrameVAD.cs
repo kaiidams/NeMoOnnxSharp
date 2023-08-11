@@ -85,26 +85,25 @@ namespace NeMoOnnxSharp
             return text;
         }
 
-        public string TranscribeStep(float[] processedSignal)
+        public double PredictStep(Span<float> processedSignal)
         {
-            processedSignal = Transpose(processedSignal, _nMelBands);
+            var transposedProcessedSignal = Transpose(processedSignal, _nMelBands);
             var container = new List<NamedOnnxValue>();
             var audioSignalData = new DenseTensor<float>(
-                processedSignal,
-                new int[3] { 1, _nMelBands, processedSignal.Length / _nMelBands });
+                transposedProcessedSignal,
+                new int[3] { 1, _nMelBands, transposedProcessedSignal.Length / _nMelBands });
             container.Add(NamedOnnxValue.CreateFromTensor("audio_signal", audioSignalData));
-            string text;
+            double score;
             using (var res = _inferSess.Run(container, new string[] { "logits" }))
             {
                 var scoreTensor = res.First();
                 float[] scores = scoreTensor.AsTensor<float>().ToArray();
-                int score = (int)(10 / (1 + Math.Exp(scores[0] - scores[1])));
-                text = (scores[0] > scores[1]) ? _labels[0] : _labels[1];
+                score = 1.0 / (1.0 + Math.Exp(scores[0] - scores[1]));
             }
-            return text;
+            return score;
         }
 
-        private float[] Transpose(float[] x, int cols)
+        private float[] Transpose(Span<float> x, int cols)
         {
             var y = new float[x.Length];
             int rows = x.Length / cols;
