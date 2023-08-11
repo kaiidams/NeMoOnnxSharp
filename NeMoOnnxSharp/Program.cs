@@ -146,7 +146,7 @@ namespace NeMoOnnxSharp
         private static void RunFileStreamAudio(string basePath, string modelPath)
         {
             var stream = GetAllAudioStream(basePath);
-            var processor = new MFCC(
+            var transform = new MFCC(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
                 winLength: 400,
@@ -159,7 +159,7 @@ namespace NeMoOnnxSharp
                 melScale: MelScale.HTK,
                 melNorm: MelNorm.None);
             var buffer = new AudioFeatureBuffer<short, float>(
-                processor, audioScale: 1.0 / short.MaxValue);
+                transform);
             using var vad = new FrameVAD(modelPath);
             byte[] responseBytes = new byte[1024];
             var audioSignal = new List<short>();

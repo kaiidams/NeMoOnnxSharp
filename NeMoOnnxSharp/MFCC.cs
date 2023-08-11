@@ -20,6 +20,10 @@ namespace NeMoOnnxSharp
         private readonly bool _logMels;
         private readonly int _nMFCC;
 
+        public int InputLength => _window.Length;
+
+        public int OutputLength => _nMFCC;
+
         public MFCC(
             int sampleRate = 16000,
             WindowFunction window = WindowFunction.Hann,

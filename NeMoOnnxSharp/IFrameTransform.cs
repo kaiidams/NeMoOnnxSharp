@@ -7,6 +7,8 @@ namespace NeMoOnnxSharp
 {
     public interface IFrameTransform<T1, T2>
     {
+        int InputLength { get; }
+        int OutputLength { get; }
         void Transform(Span<T1> input, Span<T2> output);
     }
 }
