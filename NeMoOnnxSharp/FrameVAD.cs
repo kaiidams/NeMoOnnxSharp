@@ -20,7 +20,6 @@ namespace NeMoOnnxSharp
         private FrameVAD()
         {
             _nMelBands = 64;
-            _processor = new MFCCAudioProcessor();
             _processor = new MFCCAudioProcessor(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,

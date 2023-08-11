@@ -33,11 +33,9 @@ namespace NeMoOnnxSharp
         {
         }
 
-        public override void ProcessFrame(Span<short> input, double scale, Span<float> output)
+        public override float[] Process(Span<short> waveform)
         {
-            var x = new float[output.Length];
-            MFCCStep(input.ToArray(), 0, scale, x, 0);
-            x.AsSpan().CopyTo(output);
+            return MFCC(waveform.ToArray());
         }
     }
 }

@@ -8,9 +8,8 @@ using System.Text;
 
 namespace NeMoOnnxSharp
 {
-    public interface IAudioProcessor<T, S>
+    public interface IAudioProcessor<T1, T2>
     {
-        void ProcessFrame(Span<T> input, double scale, Span<S> output);
-
+        T2[] Process(Span<T1> input);
     }
 }

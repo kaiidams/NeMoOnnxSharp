@@ -212,7 +212,10 @@ namespace NeMoOnnxSharp
                 }
             }
             sw.Stop();
-            Console.WriteLine("{0}/{1}", sw.ElapsedMilliseconds, stream.Position / 32000.0);
+            Console.WriteLine();
+            double audioTime = (stream.Position / 2) / 16000.0;
+            double clockTime = sw.ElapsedMilliseconds / 1000.0;
+            Console.WriteLine("{0} sec audio processed in {1} sec", audioTime, clockTime);
         }
 
         private static MemoryStream GetAllAudioStream(string basePath)

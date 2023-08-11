@@ -94,10 +94,7 @@ namespace NeMoOnnxSharp
             _postNormalizeOffset = postNormalizeOffset;
         }
 
-        public virtual float[] Process(short[] waveform)
-        {
-            return MelSpectrogram(waveform);
-        }
+        public abstract float[] Process(Span<short> input);
 
         public float[] MelSpectrogram(short[] waveform)
         {
@@ -450,7 +447,5 @@ namespace NeMoOnnxSharp
                 }
             }
         }
-
-        public abstract void ProcessFrame(Span<short> input, double scale, Span<float> output);
     }
 }

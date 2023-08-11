@@ -96,11 +96,6 @@ namespace NeMoOnnxSharp
 
         public virtual float[] Process(short[] waveform)
         {
-            return MelSpectrogram(waveform);
-        }
-
-        public float[] MelSpectrogram(short[] waveform)
-        {
             double scale = GetScaleFactor(waveform);
             int outputStep = _nMelBands;
             int outputLength = GetOutputLength(waveform);
@@ -109,45 +104,6 @@ namespace NeMoOnnxSharp
             for (int outputOffset = 0; outputOffset < output.Length; outputOffset += outputStep)
             {
                 MelSpectrogramStep(waveform, waveformOffset, scale, output, outputOffset);
-                waveformOffset += _hopLength;
-            }
-            if (_postNormalize)
-            {
-                PostNormalize(output, outputStep);
-            }
-            return output;
-        }
-
-        public float[] Spectrogram(short[] waveform)
-        {
-            double scale = GetScaleFactor(waveform);
-            int outputStep = _fftLength / 2 + 1;
-            int outputLength = GetOutputLength(waveform);
-            float[] output = new float[outputStep * outputLength];
-            int waveformOffset = 0;
-            for (int outputOffset = 0; outputOffset < output.Length; outputOffset += outputStep)
-            {
-                SpectrogramStep(waveform, waveformOffset, scale, output, outputOffset, outputStep);
-                waveformOffset += _hopLength;
-            }
-            if (_postNormalize)
-            {
-                PostNormalize(output, outputStep);
-            }
-            return output;
-        }
-
-
-        public float[] MFCC(short[] waveform)
-        {
-            double scale = GetScaleFactor(waveform);
-            int outputStep = _nMFCC;
-            int outputLength = GetOutputLength(waveform);
-            float[] output = new float[outputStep * outputLength];
-            int waveformOffset = 0;
-            for (int outputOffset = 0; outputOffset < output.Length; outputOffset += outputStep)
-            {
-                MFCCStep(waveform, waveformOffset, scale, output, outputOffset);
                 waveformOffset += _hopLength;
             }
             if (_postNormalize)
@@ -211,16 +167,6 @@ namespace NeMoOnnxSharp
             ToMagnitude(_temp2, _temp1, _fftLength);
             ToMelSpectrogram(_temp2, _temp1);
             for (int i = 0; i < _nMelBands; i++) output[outputOffset + i] = (float)_temp1[i];
-        }
-
-        public void MFCCStep(short[] waveform, int waveformOffset, double scale, float[] output, int outputOffset)
-        {
-            ReadFrame(waveform, waveformOffset, scale, _temp1);
-            FFT.CFFT(_temp1, _temp2, _fftLength);
-            ToMagnitude(_temp2, _temp1, _fftLength);
-            ToMelSpectrogram(_temp2, _temp1);
-            FFT.DCT2(_temp1, _temp2, _nMFCC);
-            for (int i = 0; i < _nMelBands; i++) output[outputOffset + i] = (float)_temp2[i];
         }
 
         private void ToSpectrogram(double[] input, float[] output, int outputOffset, int outputSize)
