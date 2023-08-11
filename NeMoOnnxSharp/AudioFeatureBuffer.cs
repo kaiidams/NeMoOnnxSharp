@@ -29,11 +29,10 @@ namespace NeMoOnnxSharp
         public int OutputCount => _outputCount;
         public T2[] OutputBuffer => _outputBuffer;
 
-
         public AudioFeatureBuffer(
             IFrameTransform<T1, T2> transform,
             int hopLength,
-            int numOutputFrames = 1000)
+            int numOutputFrames = 100)
         {
             _transform = transform;
             _hopLength = hopLength;
