@@ -26,21 +26,10 @@ namespace NeMoOnnxSharp
                 .Build();
             var settings = config.GetRequiredSection("Settings").Get<Settings>();
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string appDirPath = Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.LocalApplicationData,
-                    Environment.SpecialFolderOption.DoNotVerify),
-                AppName);
-            string cacheDirectoryPath = Path.Combine(appDirPath, "Cache");
-            var bundle = ModelBundle.GetBundle(settings.Model);
-            Console.WriteLine("{0}", bundle.ModelUrl);
-            using var httpClient = new HttpClient();
-            var downloader = new ModelDownloader(httpClient, cacheDirectoryPath);
-            string fileName = GetFileNameFromUrl(bundle.ModelUrl);
-            string modelPath = await downloader.MayDownloadAsync(fileName, bundle.ModelUrl, bundle.Hash);
 
-            if (settings.Model == "QuartzNet15x5Base-En")
+            if (settings.Task == "transcript")
             {
+                string modelPath = await DownloadModelAsync(settings.AsrModel);
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
@@ -58,19 +47,24 @@ namespace NeMoOnnxSharp
                     Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
                 }
             }
-            else if (settings.Model == "vad_marblenet")
+            if (settings.Task == "socketaudio")
             {
-                if (settings.Task == "socketaudio")
+                string modelPath = await DownloadModelAsync(settings.VadModel);
+                RunSocketAudio(modelPath);
+                return;
+            }
+            else if (settings.Task == "streamaudio")
+            {
+                var modelPaths = await DownloadModelsAsync(new string[]
                 {
-                    RunSocketAudio(modelPath);
-                    return;
-                }
-                else if (settings.Task == "streamaudio")
-                {
-                    RunFileStreamAudio(basePath, modelPath);
-                    return;
-                }
-
+                    settings.VadModel, settings.AsrModel
+                });
+                RunFileStreamAudio(basePath, modelPaths);
+                return;
+            }
+            else if (settings.Task == "vad")
+            {
+                string modelPath = await DownloadModelAsync(settings.VadModel);
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
@@ -143,7 +137,35 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private static void RunFileStreamAudio(string basePath, string modelPath)
+        private static async Task<string> DownloadModelAsync(string model)
+        {
+            var modelPaths = await DownloadModelsAsync(new string[] { model });
+            return modelPaths[0];
+        }
+
+        private static async Task<string[]> DownloadModelsAsync(string[] models)
+        {
+            string appDirPath = Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData,
+                    Environment.SpecialFolderOption.DoNotVerify),
+                AppName);
+            string cacheDirectoryPath = Path.Combine(appDirPath, "Cache");
+            using var httpClient = new HttpClient();
+            var downloader = new ModelDownloader(httpClient, cacheDirectoryPath);
+            var modelPaths = new List<string>();
+            foreach (string model in models)
+            {
+                var bundle = ModelBundle.GetBundle(model);
+                Console.WriteLine("Model: {0}", model);
+                string fileName = GetFileNameFromUrl(bundle.ModelUrl);
+                string modelPath = await downloader.MayDownloadAsync(fileName, bundle.ModelUrl, bundle.Hash);
+                modelPaths.Add(modelPath);
+            }
+            return modelPaths.ToArray();
+        }
+
+        private static void RunFileStreamAudio(string basePath, string[] modelPaths)
         {
             var stream = GetAllAudioStream(basePath);
             int sampleRate = 16000;
@@ -162,7 +184,8 @@ namespace NeMoOnnxSharp
             var buffer = new AudioFeatureBuffer<short, float>(
                 transform,
                 hopLength: 160);
-            using var vad = new FrameVAD(modelPath);
+            using var recognizer = new SpeechRecognizer(modelPaths[1]);
+            using var vad = new FrameVAD(modelPaths[0]);
             byte[] responseBytes = new byte[1024];
             int count = 0;
             int vadWinLength = (int)(sampleRate * 0.31 / buffer.HopLength * buffer.NumOutputChannels);
@@ -175,15 +198,16 @@ namespace NeMoOnnxSharp
             var scores = new double[scoresLength];
             double scoreSum = 0.0;
             string displayChars = ".-=*#";
-            double recordStartThreshold = 0.5;
-            double recordEndThreshold = 0.5;
+            double recordStartThreshold = 0.75;
+            double recordEndThreshold = 0.25;
             bool recording = false;
-            int recordStartPad = 32 + 5; // # 50ms and 320ms delay
+            int recordStartShift = 100 * 16; // # 100ms delay
             int recordEndPad = 5; // # 50ms
             int repeatCount = 0;
             int recordedAudioIndex = 0;
             var recordedAudio = new List<short>();
             int recordedIndex = 0;
+            using var scoreStream = File.OpenWrite("score.dat");
             while (true)
             {
                 int bytesReceived = stream.Read(responseBytes);
@@ -209,6 +233,7 @@ namespace NeMoOnnxSharp
                         scoresIndex++;
                         if (scoresIndex >= scoresLength) scoresIndex = 0;
                         score = scoreSum / scoresLength;
+                        scoreStream.Write(new byte[1] { (byte)(score * 255) });
                         char recordingChar = ' ';
                         recordedAudioIndex += buffer.HopLength;
                         if (!recording)
@@ -218,10 +243,10 @@ namespace NeMoOnnxSharp
                                 recording = true;
                                 recordingChar = '[';
                                 repeatCount = 0;
-                                if (recordedAudioIndex - recordStartPad * 160 > 0)
+                                if (recordedAudioIndex + recordStartShift > 0)
                                 {
-                                    recordedAudio.RemoveRange(0, recordedAudioIndex - recordStartPad * 160);
-                                    recordedAudioIndex = recordStartPad * 160;
+                                    recordedAudio.RemoveRange(0, recordedAudioIndex + recordStartShift);
+                                    recordedAudioIndex = -recordStartShift;
                                 }
                             }
                         }
@@ -237,6 +262,9 @@ namespace NeMoOnnxSharp
                                     recordedAudio.ToArray(),
                                     16000);
                                 recordedIndex++;
+                                string text = recognizer.Recognize(recordedAudio.ToArray());
+                                Console.WriteLine();
+                                Console.WriteLine("text: {0}", text);
                                 //recordedAudio.Clear();
                                 //recordedAudioIndex = 0;
                             }
