@@ -7,7 +7,6 @@ namespace NeMoOnnxSharp
 {
     public class AudioToMFCCPreprocessor : IAudioPreprocessor<short, float>
     {
-        protected readonly int _sampleRate;
         private readonly bool _center;
         protected readonly int _nWindowSize;
         protected readonly int _nWindowStride;
@@ -32,7 +31,6 @@ namespace NeMoOnnxSharp
             MFCCNorm norm = MFCCNorm.Ortho,
             bool log = true)
         {
-            _sampleRate = sampleRate;
             _preNormalize = preNormalize;
             _center = center;
             _nWindowSize = nWindowSize ?? (int)(windowSize * sampleRate);
@@ -107,12 +105,12 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private double GetScaleFactor(Span<short> waveform)
+        private double GetScaleFactor(Span<short> input)
         {
             double scale;
             if (_preNormalize > 0)
             {
-                scale = _preNormalize / MaxAbsValue(waveform);
+                scale = _preNormalize / MaxAbsValue(input);
             }
             else
             {
@@ -122,12 +120,12 @@ namespace NeMoOnnxSharp
             return scale;
         }
 
-        private int MaxAbsValue(Span<short> waveform)
+        private int MaxAbsValue(Span<short> input)
         {
             int maxValue = 1;
-            for (int i = 0; i < waveform.Length; i++)
+            for (int i = 0; i < input.Length; i++)
             {
-                int value = waveform[i];
+                int value = input[i];
                 if (value < 0) value = -value;
                 if (maxValue < value) maxValue = value;
             }

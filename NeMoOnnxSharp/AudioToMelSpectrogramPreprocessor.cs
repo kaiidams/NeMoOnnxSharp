@@ -90,16 +90,16 @@ namespace NeMoOnnxSharp
             _postNormalizeOffset = postNormalizeOffset;
         }
 
-        public float[] GetFeatures(Span<short> waveform)
+        public float[] GetFeatures(Span<short> input)
         {
-            double scale = GetScaleFactor(waveform);
+            double scale = GetScaleFactor(input);
             int outputStep = _features;
-            int outputLength = GetOutputLength(waveform);
+            int outputLength = GetOutputLength(input);
             float[] output = new float[outputStep * outputLength];
             int waveformOffset = 0;
             for (int outputOffset = 0; outputOffset < output.Length; outputOffset += outputStep)
             {
-                MelSpectrogramStep(waveform, waveformOffset, scale, output.AsSpan(outputOffset));
+                MelSpectrogramStep(input, waveformOffset, scale, output.AsSpan(outputOffset));
                 waveformOffset += _nWindowStride;
             }
             if (_postNormalize)
@@ -109,24 +109,24 @@ namespace NeMoOnnxSharp
             return output;
         }
 
-        private int GetOutputLength(Span<short> waveform)
+        private int GetOutputLength(Span<short> input)
         {
             if (_frameType == FrameType.Center || _frameType == FrameType.CenterPreemph)
             {
-                return (waveform.Length + _nWindowStride - 1) / _nWindowStride;
+                return (input.Length + _nWindowStride - 1) / _nWindowStride;
             }
             else
             {
-                return (waveform.Length - _window.Length) / _nWindowStride + 1;
+                return (input.Length - _window.Length) / _nWindowStride + 1;
             }
         }
 
-        private double GetScaleFactor(Span<short> waveform)
+        private double GetScaleFactor(Span<short> input)
         {
             double scale;
             if (_preNormalize > 0)
             {
-                scale = _preNormalize / MaxAbsValue(waveform);
+                scale = _preNormalize / MaxAbsValue(input);
             }
             else
             {
@@ -136,12 +136,12 @@ namespace NeMoOnnxSharp
             return scale;
         }
 
-        private int MaxAbsValue(Span<short> waveform)
+        private int MaxAbsValue(Span<short> input)
         {
             int maxValue = 1;
-            for (int i = 0; i < waveform.Length; i++)
+            for (int i = 0; i < input.Length; i++)
             {
-                int value = waveform[i];
+                int value = input[i];
                 if (value < 0) value = -value;
                 if (maxValue < value) maxValue = value;
             }
@@ -149,12 +149,12 @@ namespace NeMoOnnxSharp
         }
 
         public void MelSpectrogramStep(
-            Span<short> waveform, int waveformOffset,
+            Span<short> input, int waveformOffset,
             double scale, Span<float> output)
         {
             Span<double> temp1 = stackalloc double[_nFFT];
             Span<double> temp2 = stackalloc double[_nFFT];
-            ReadFrame(waveform, waveformOffset, scale, temp1);
+            ReadFrame(input, waveformOffset, scale, temp1);
             FFT.CFFT(temp1, temp2, _nFFT);
             ToMagnitude(temp2, temp1, _nFFT);
             MelBands.ToMelSpectrogram(
@@ -162,29 +162,29 @@ namespace NeMoOnnxSharp
             for (int i = 0; i < _features; i++) output[i] = (float)temp1[i];
         }
 
-        protected void ReadFrame(Span<short> waveform, int offset, double scale, Span<double> frame)
+        protected void ReadFrame(Span<short> input, int offset, double scale, Span<double> frame)
         {
             switch (_frameType)
             {
                 case FrameType.None:
-                    ReadFrameNone(waveform, offset, scale, frame);
+                    ReadFrameNone(input, offset, scale, frame);
                     break;
                 case FrameType.Preemph:
                     throw new NotImplementedException();
                 case FrameType.Center:
-                    ReadFrameCenter(waveform, offset, scale, frame);
+                    ReadFrameCenter(input, offset, scale, frame);
                     break;
                 case FrameType.CenterPreemph:
-                    ReadFrameCenterPreemphasis(waveform, offset, scale, frame);
+                    ReadFrameCenterPreemphasis(input, offset, scale, frame);
                     break;
             }
         }
 
-        private void ReadFrameNone(Span<short> waveform, int offset, double scale, Span<double> frame)
+        private void ReadFrameNone(Span<short> input, int offset, double scale, Span<double> frame)
         {
             for (int i = 0; i < _window.Length; i++)
             {
-                frame[i] = waveform[offset + i] * _window[i] * scale;
+                frame[i] = input[offset + i] * _window[i] * scale;
             }
             for (int i = _window.Length; i < frame.Length; i++)
             {
@@ -192,7 +192,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private void ReadFrameCenter(Span<short> waveform, int offset, double scale, Span<double> frame)
+        private void ReadFrameCenter(Span<short> input, int offset, double scale, Span<double> frame)
         {
             int frameOffset = frame.Length / 2 - _window.Length / 2;
             for (int i = 0; i < frameOffset; i++)
@@ -203,7 +203,7 @@ namespace NeMoOnnxSharp
             for (int i = 0; i < _window.Length; i++)
             {
                 int k = i + waveformOffset;
-                double v = (k >= 0 && k < waveform.Length) ? waveform[k] : 0;
+                double v = (k >= 0 && k < input.Length) ? input[k] : 0;
                 frame[i + frameOffset] = scale * v * _window[i];
             }
             for (int i = frameOffset + _window.Length; i < frame.Length; i++)
@@ -212,7 +212,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private void ReadFrameCenterPreemphasis(Span<short> waveform, int offset, double scale, Span<double> frame)
+        private void ReadFrameCenterPreemphasis(Span<short> input, int offset, double scale, Span<double> frame)
         {
             int frameOffset = (frame.Length - 1) / 2 - (_window.Length - 1) / 2;
             for (int i = 0; i < frameOffset; i++)
@@ -223,9 +223,9 @@ namespace NeMoOnnxSharp
             for (int i = 0; i < _window.Length; i++)
             {
                 int k = i + waveformOffset;
-                double v = (k >= 0 && k < waveform.Length) ? waveform[k] : 0;
+                double v = (k >= 0 && k < input.Length) ? input[k] : 0;
                 k--;
-                if (k >= 0 && k < waveform.Length) v -= _preemph * waveform[k];
+                if (k >= 0 && k < input.Length) v -= _preemph * input[k];
                 frame[i + frameOffset] = scale * v * _window[i];
             }
             for (int i = frameOffset + _window.Length; i < frame.Length; i++)
