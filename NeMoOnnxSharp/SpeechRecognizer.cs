@@ -16,7 +16,7 @@ namespace NeMoOnnxSharp
     {
         private const string Vocabulary = " abcdefghijklmnopqrstuvwxyz'_";
 
-        private readonly AudioToMelSpectrogramProcessor _processor;
+        private readonly IAudioPreprocessor<short, float> _processor;
         private readonly CharTokenizer _tokenizer;
         private readonly InferenceSession _inferSess;
         private readonly int _nMelBands;
@@ -24,7 +24,7 @@ namespace NeMoOnnxSharp
         private SpeechRecognizer()
         {
             _nMelBands = 64;
-            _processor = new AudioToMelSpectrogramProcessor(
+            _processor = new AudioToMelSpectrogramPreprocessor(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
                 windowLength: 400,
@@ -62,7 +62,7 @@ namespace NeMoOnnxSharp
         public string Recognize(short[] waveform)
         {
             string text = string.Empty;
-            var audioSignal = _processor.Process(waveform);
+            var audioSignal = _processor.GetFeatures(waveform);
             audioSignal = Transpose(audioSignal, _nMelBands);
             var container = new List<NamedOnnxValue>();
             var audioSignalData = new DenseTensor<float>(

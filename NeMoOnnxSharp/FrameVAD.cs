@@ -12,7 +12,7 @@ namespace NeMoOnnxSharp
 {
     public class FrameVAD : IDisposable
     {
-        private readonly AudioProcessor _processor;
+        private readonly IAudioPreprocessor<short, float> _processor;
         private readonly InferenceSession _inferSess;
         private readonly int _nMelBands;
         private readonly string[] _labels;
@@ -20,7 +20,7 @@ namespace NeMoOnnxSharp
         private FrameVAD()
         {
             _nMelBands = 64;
-            _processor = new MFCCAudioProcessor(
+            _processor = new AudioToMFCCPreprocessor(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
                 windowLength: 400,
@@ -67,7 +67,7 @@ namespace NeMoOnnxSharp
             for (int j = 0; j + windowLength < waveform.Length; j += stepSize)
             {
                 var waveform2 = waveform.AsSpan(j, windowLength).ToArray();
-                var processedSignal = _processor.MFCC(waveform2);
+                var processedSignal = _processor.GetFeatures(waveform2);
                 processedSignal = Transpose(processedSignal, _nMelBands);
                 var container = new List<NamedOnnxValue>();
                 var audioSignalData = new DenseTensor<float>(

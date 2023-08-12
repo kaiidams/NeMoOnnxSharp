@@ -5,7 +5,7 @@ using System;
 
 namespace NeMoOnnxSharp
 {
-    public abstract class AudioProcessor : IAudioProcessor<short, float>
+    public class AudioToMFCCPreprocessor : IAudioPreprocessor<short, float>
     {
         private enum FrameType
         {
@@ -46,7 +46,7 @@ namespace NeMoOnnxSharp
         private readonly double _postNormalizeOffset;
         private readonly int _nMFCC;
 
-        public AudioProcessor(
+        public AudioToMFCCPreprocessor(
             int sampleRate = 16000,
             WindowFunction window = WindowFunction.Hann,
             int windowLength = 0,
@@ -94,7 +94,10 @@ namespace NeMoOnnxSharp
             _postNormalizeOffset = postNormalizeOffset;
         }
 
-        public abstract float[] Process(Span<short> input);
+        public float[] GetFeatures(Span<short> input)
+        {
+            return MFCC(input.ToArray());
+        }
 
         public float[] MelSpectrogram(short[] waveform)
         {

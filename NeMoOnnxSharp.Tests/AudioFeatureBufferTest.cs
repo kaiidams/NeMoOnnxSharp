@@ -48,14 +48,14 @@ namespace NeMoOnnxSharp.Tests
         }
 
         short[] waveform;
-        AudioProcessor processor;
+        AudioToMFCCPreprocessor processor;
 
         public PreprocessorTest()
         {
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             string waveFile = Path.Combine(appDirPath, "Data", SampleWAVSpeechFile);
             waveform = WaveFile.ReadWAV(waveFile, SampleRate);
-            processor = new MFCCAudioProcessor(
+            processor = new AudioToMFCCPreprocessor(
                 sampleRate: SampleRate,
                 window: WindowFunction.Hann,
                 windowLength: 400,
@@ -90,7 +90,7 @@ namespace NeMoOnnxSharp.Tests
         [TestMethod]
         public void TestMFCC()
         {
-            var processor = new MFCCAudioProcessor(
+            var processor = new AudioToMFCCPreprocessor(
                 sampleRate: SampleRate,
                 window: WindowFunction.Hann,
                 windowLength: 400,
@@ -115,14 +115,14 @@ namespace NeMoOnnxSharp.Tests
         {
             int windowLength = 5;
             int fftLength = 9;
-            var processor = new MFCCAudioProcessor(
+            var processor = new AudioToMFCCPreprocessor(
                 windowLength: windowLength,
                 fftLength: fftLength,
                 preemph: 0.0);
 
-            MethodInfo methodInfo1 = typeof(AudioProcessor).GetMethod(
+            MethodInfo methodInfo1 = typeof(AudioToMFCCPreprocessor).GetMethod(
                 "ReadFrameCenter", BindingFlags.NonPublic | BindingFlags.Instance);
-            MethodInfo methodInfo2 = typeof(AudioProcessor).GetMethod(
+            MethodInfo methodInfo2 = typeof(AudioToMFCCPreprocessor).GetMethod(
                 "ReadFrameCenterPreemphasis", BindingFlags.NonPublic | BindingFlags.Instance);
 
             var rng = new Random();

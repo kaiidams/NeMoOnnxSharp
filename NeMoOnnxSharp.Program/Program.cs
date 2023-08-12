@@ -72,7 +72,7 @@ namespace NeMoOnnxSharp.Program
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
-                var processor = new MFCCAudioProcessor(
+                var processor = new AudioToMFCCPreprocessor(
                     sampleRate: 16000,
                     window: WindowFunction.Hann,
                     windowLength: 400,
