@@ -5,7 +5,7 @@ using System;
 
 namespace NeMoOnnxSharp
 {
-    public class MFCC : IFrameTransform<short, float>
+    public class MFCC : IFeaturizer<short, float>
     {
         private const double InvMaxShort = 1.0 / short.MaxValue;
         private const double LogOffset = 1e-6;
@@ -63,7 +63,7 @@ namespace NeMoOnnxSharp
             _nMFCC = nMFCC;
         }
 
-        public void Transform(Span<short> input, Span<float> output)
+        public void GetFeatures(Span<short> input, Span<float> output)
         {
             Span<double> temp1 = stackalloc double[_nFFT];
             Span<double> temp2 = stackalloc double[_nFFT];

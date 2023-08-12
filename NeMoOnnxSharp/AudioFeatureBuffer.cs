@@ -12,7 +12,7 @@ namespace NeMoOnnxSharp
 {
     public class AudioFeatureBuffer<T1, T2> : IAudioFeatureBuffer<T1, T2>
     {
-        private readonly IFrameTransform<T1, T2> _transform;
+        private readonly IFeaturizer<T1, T2> _transform;
         private readonly int _numInputChannels;
         private readonly int _numOutputChannels;
         private readonly int _hopLength;
@@ -30,7 +30,7 @@ namespace NeMoOnnxSharp
         public T2[] OutputBuffer => _outputBuffer;
 
         public AudioFeatureBuffer(
-            IFrameTransform<T1, T2> transform,
+            IFeaturizer<T1, T2> transform,
             int hopLength,
             int numOutputFrames = 100)
         {
@@ -69,7 +69,7 @@ namespace NeMoOnnxSharp
                 int inputBufferOffset = 0;
                 while (inputBufferOffset + _winLength <= _inputCount)
                 {
-                    _transform.Transform(
+                    _transform.GetFeatures(
                         _inputBuffer.AsSpan(inputBufferOffset, _numInputChannels * _winLength),
                         _outputBuffer.AsSpan(_outputCount, _numOutputChannels));
                     _outputCount += _numOutputChannels;
@@ -93,7 +93,7 @@ namespace NeMoOnnxSharp
                 {
                     return written;
                 }
-                _transform.Transform(
+                _transform.GetFeatures(
                     input.Slice(written, _numInputChannels * _winLength),
                     _outputBuffer.AsSpan(_outputCount, _numOutputChannels));
                 _outputCount += _numOutputChannels;

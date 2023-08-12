@@ -12,7 +12,7 @@ namespace NeMoOnnxSharp
         protected readonly int _nWindowSize;
         protected readonly int _nWindowStride;
         private readonly double _preNormalize;
-        private readonly IFrameTransform<short, float> _featurizer;
+        private readonly IFeaturizer<short, float> _featurizer;
 
         public AudioToMFCCPreprocessor(
             int sampleRate = 16000,
@@ -63,7 +63,7 @@ namespace NeMoOnnxSharp
             {
                 if (inputOffset > 0 && inputOffset + _nWindowSize <= input.Length)
                 {
-                    _featurizer.Transform(
+                    _featurizer.GetFeatures(
                         input.Slice(inputOffset, _nWindowSize),
                         output.AsSpan(outputOffset, outputStep));
                 }
@@ -71,7 +71,7 @@ namespace NeMoOnnxSharp
                 {
                     // TODO
                     Span<short> temp = stackalloc short[_nWindowSize];
-                    _featurizer.Transform(
+                    _featurizer.GetFeatures(
                         temp,
                         output.AsSpan(outputOffset, outputStep));
                 }
