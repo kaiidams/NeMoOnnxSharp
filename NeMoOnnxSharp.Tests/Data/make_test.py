@@ -100,8 +100,9 @@ def convert_mfcc(audio_signal, length):
     with torch.no_grad():
         processed_signal, processed_signal_length = preprocessor(input_signal=audio_signal, length=length)
     print(processed_signal, processed_signal_length)
+    print(processed_signal.shape, processed_signal_length)
     with open('mfcc.bin', 'wb') as fp:
-        fp.write(processed_signal.numpy().tobytes("C"))
+        fp.write(processed_signal[0].T.numpy().tobytes("C"))
 
 
 if __name__ == "__main__":
