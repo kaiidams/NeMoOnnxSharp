@@ -81,7 +81,7 @@ namespace NeMoOnnxSharp
                 features,
                 htk ? MelScale.HTK : MelScale.Slaney);
             _melNorm = melNorm;
-            _nFFT = nFFT ?? (int)Math.Exp(Math.Ceiling(Math.Log(_window.Length, 2)));
+            _nFFT = nFFT ?? (int)Math.Pow(2, Math.Ceiling(Math.Log(_window.Length, 2)));
             _features = features;
             _magPower = magPower;
             _log = log;

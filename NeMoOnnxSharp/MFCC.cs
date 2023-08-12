@@ -52,10 +52,6 @@ namespace NeMoOnnxSharp
             {
                 throw new ArgumentException("Only Ortho is supported for MFCC norm");
             }
-            if (fMax == 0.0)
-            {
-                fMax = sampleRate / 2;
-            }
             _sampleRate = sampleRate;
             _window = Window.MakeWindow(window, winLength ?? nFFT);
             _melBands = MelBands.MakeMelBands(fMin, fMax ?? sampleRate / 2, nMels, melScale);

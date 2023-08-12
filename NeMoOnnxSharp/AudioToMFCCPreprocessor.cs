@@ -37,7 +37,7 @@ namespace NeMoOnnxSharp
             _center = center;
             _nWindowSize = nWindowSize ?? (int)(windowSize * sampleRate);
             _nWindowStride = nWindowStride ?? (int)(windowStride * sampleRate);
-            int _nFFT = (int)Math.Exp(Math.Ceiling(Math.Log(_nWindowSize, 2)));
+            int _nFFT = nFFT ?? (int)Math.Pow(2, Math.Ceiling(Math.Log(_nWindowSize, 2)));
             _featurizer = new MFCC(
                 sampleRate: sampleRate,
                 window: window,
