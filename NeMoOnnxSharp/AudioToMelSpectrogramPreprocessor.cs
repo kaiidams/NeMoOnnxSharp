@@ -27,7 +27,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        protected readonly double _sampleRate;
+        protected readonly int _sampleRate;
         protected readonly double[] _window;
         private readonly FrameType _frameType;
         protected readonly int _nWindowStride;
@@ -36,7 +36,7 @@ namespace NeMoOnnxSharp
         protected readonly double[] _melBands;
         protected readonly int _nFFT;
         protected readonly int _features;
-        private readonly MelNorm _melNormalizeType;
+        private readonly MelNorm _melNorm;
         private readonly int _magPower;
         private readonly double _logZeroGuardValue;
         private readonly bool _log;
@@ -59,7 +59,7 @@ namespace NeMoOnnxSharp
             double lowFreq = 0.0,
             double? highFreq = null,
             bool htk = false,
-            MelNorm melNormalize = MelNorm.Slaney,
+            MelNorm melNorm = MelNorm.Slaney,
             bool log = true,
             double? logZeroGuardValue = null,
             int magPower = 2,
@@ -80,7 +80,7 @@ namespace NeMoOnnxSharp
                 lowFreq, highFreq ?? sampleRate / 2,
                 features,
                 htk ? MelScale.HTK : MelScale.Slaney);
-            _melNormalizeType = melNormalize;
+            _melNorm = melNorm;
             _nFFT = nFFT ?? (int)Math.Exp(Math.Ceiling(Math.Log(_window.Length, 2)));
             _features = features;
             _magPower = magPower;
@@ -99,7 +99,7 @@ namespace NeMoOnnxSharp
             int waveformOffset = 0;
             for (int outputOffset = 0; outputOffset < output.Length; outputOffset += outputStep)
             {
-                MelSpectrogramStep(waveform, waveformOffset, scale, output, outputOffset);
+                MelSpectrogramStep(waveform, waveformOffset, scale, output.AsSpan(outputOffset));
                 waveformOffset += _nWindowStride;
             }
             if (_postNormalize)
@@ -148,91 +148,18 @@ namespace NeMoOnnxSharp
             return maxValue;
         }
 
-        public void MelSpectrogramStep(Span<short> waveform, int waveformOffset, double scale, float[] output, int outputOffset)
+        public void MelSpectrogramStep(
+            Span<short> waveform, int waveformOffset,
+            double scale, Span<float> output)
         {
             Span<double> temp1 = stackalloc double[_nFFT];
             Span<double> temp2 = stackalloc double[_nFFT];
             ReadFrame(waveform, waveformOffset, scale, temp1);
             FFT.CFFT(temp1, temp2, _nFFT);
             ToMagnitude(temp2, temp1, _nFFT);
-            ToMelSpectrogram(temp2, temp1);
-            for (int i = 0; i < _features; i++) output[outputOffset + i] = (float)temp1[i];
-        }
-
-        private void ToMelSpectrogram(Span<double> spec, Span<double> melspec)
-        {
-            if (!_log) throw new NotImplementedException();
-            switch (_melNormalizeType)
-            {
-                case MelNorm.None:
-                    ToMelSpectrogramNone(spec, melspec);
-                    break;
-                case MelNorm.Slaney:
-                    ToMelSpectrogramSlaney(spec, melspec);
-                    break;
-            }
-        }
-
-        private void ToMelSpectrogramNone(Span<double> spec, Span<double> melspec)
-        {
-            for (int i = 0; i < _features; i++)
-            {
-                double startHz = _melBands[i];
-                double peakHz = _melBands[i + 1];
-                double endHz = _melBands[i + 2];
-                double v = 0.0;
-                int j = (int)(startHz * _nFFT / _sampleRate) + 1;
-                while (true)
-                {
-                    double hz = j * _sampleRate / _nFFT;
-                    if (hz > peakHz)
-                        break;
-                    double r = (hz - startHz) / (peakHz - startHz);
-                    v += spec[j] * r;
-                    j++;
-                }
-                while (true)
-                {
-                    double hz = j * _sampleRate / _nFFT;
-                    if (hz > endHz)
-                        break;
-                    double r = (endHz - hz) / (endHz - peakHz);
-                    v += spec[j] * r;
-                    j++;
-                }
-                melspec[i] = (float)Math.Log(v + _logZeroGuardValue);
-            }
-        }
-
-        private void ToMelSpectrogramSlaney(Span<double> spec, Span<double> melspec)
-        {
-            for (int i = 0; i < _features; i++)
-            {
-                double startHz = _melBands[i];
-                double peakHz = _melBands[i + 1];
-                double endHz = _melBands[i + 2];
-                double v = 0.0;
-                int j = (int)(startHz * _nFFT / _sampleRate) + 1;
-                while (true)
-                {
-                    double hz = j * _sampleRate / _nFFT;
-                    if (hz > peakHz)
-                        break;
-                    double r = (hz - startHz) / (peakHz - startHz);
-                    v += spec[j] * r * 2 / (endHz - startHz);
-                    j++;
-                }
-                while (true)
-                {
-                    double hz = j * _sampleRate / _nFFT;
-                    if (hz > endHz)
-                        break;
-                    double r = (endHz - hz) / (endHz - peakHz);
-                    v += spec[j] * r * 2 / (endHz - startHz);
-                    j++;
-                }
-                melspec[i] = (float)Math.Log(v + _logZeroGuardValue);
-            }
+            MelBands.ToMelSpectrogram(
+                temp2, _melBands, _sampleRate, _nFFT, _features, _melNorm, _log, _logZeroGuardValue, temp1);
+            for (int i = 0; i < _features; i++) output[i] = (float)temp1[i];
         }
 
         protected void ReadFrame(Span<short> waveform, int offset, double scale, Span<double> frame)
