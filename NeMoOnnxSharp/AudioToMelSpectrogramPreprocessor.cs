@@ -62,22 +62,21 @@ namespace NeMoOnnxSharp
             bool htk = false,
             MelNorm melNormalize = MelNorm.Slaney,
             bool log = true,
-            double logZeroGuardValue = 1e-6,
+            double? logZeroGuardValue = null,
             int magPower = 2,
             bool postNormalize = false,
             double postNormalizeOffset = 1e-5)
         {
-            if (highFreq == 0.0)
-            {
-                highFreq = sampleRate / 2;
-            }
             _sampleRate = sampleRate;
             _preNormalize = preNormalize;
             _preemph = preemph;
             _window = Window.MakeWindow(window, nWindowSize ?? (int)(windowSize * sampleRate));
             _frameType = GetFrameType(center, preemph);
             _nWindowStride = nWindowStride ?? (int)(windowStride * sampleRate);
-            _melBands = MelBands.MakeMelBands(lowFreq, highFreq ?? 0.0, features, htk ? MelScale.HTK : MelScale.Slaney);
+            _melBands = MelBands.MakeMelBands(
+                lowFreq, highFreq ?? sampleRate / 2,
+                features,
+                htk ? MelScale.HTK : MelScale.Slaney);
             _melNormalizeType = melNormalize;
             _nFFT = nFFT ?? (int)Math.Exp(Math.Ceiling(Math.Log(_window.Length, 2)));
             _temp1 = new double[_nFFT];
@@ -85,7 +84,7 @@ namespace NeMoOnnxSharp
             _features = features;
             _magPower = magPower;
             _log = log;
-            _logZeroGuardValue = logZeroGuardValue;
+            _logZeroGuardValue = logZeroGuardValue ?? Math.Pow(2, -24);
             _postNormalize = postNormalize;
             _postNormalizeOffset = postNormalizeOffset;
         }

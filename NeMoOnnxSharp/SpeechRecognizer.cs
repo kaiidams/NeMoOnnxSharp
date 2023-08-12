@@ -19,26 +19,20 @@ namespace NeMoOnnxSharp
         private readonly IAudioPreprocessor<short, float> _processor;
         private readonly CharTokenizer _tokenizer;
         private readonly InferenceSession _inferSess;
-        private readonly int _nMelBands;
+        private readonly int _features;
 
         private SpeechRecognizer(InferenceSession inferSess)
         {
-            _nMelBands = 64;
+            _features = 64;
             _processor = new AudioToMelSpectrogramPreprocessor(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
                 windowSize: 0.02,
                 windowStride: 0.01,
                 nFFT: 512,
-                preNormalize: 0.0,
                 preemph: 0.97,
                 center: true,
-                features: 64,
-                lowFreq: 0.0,
-                highFreq: 0.0,
-                htk: false,
-                melNormalize: MelNorm.Slaney,
-                logZeroGuardValue: Math.Pow(2, -24),
+                features: _features,
                 postNormalize: true,
                 postNormalizeOffset: 1e-5);
             _tokenizer = new CharTokenizer(Vocabulary);
@@ -62,11 +56,11 @@ namespace NeMoOnnxSharp
         {
             string text = string.Empty;
             var audioSignal = _processor.GetFeatures(waveform);
-            audioSignal = Transpose(audioSignal, _nMelBands);
+            audioSignal = Transpose(audioSignal, _features);
             var container = new List<NamedOnnxValue>();
             var audioSignalData = new DenseTensor<float>(
                 audioSignal,
-                new int[3] { 1, _nMelBands, audioSignal.Length / _nMelBands });
+                new int[3] { 1, _features, audioSignal.Length / _features });
             container.Add(NamedOnnxValue.CreateFromTensor("audio_signal", audioSignalData));
             using (var res = _inferSess.Run(container, new string[] { "logprobs" }))
             {
