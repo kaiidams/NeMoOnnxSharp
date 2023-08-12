@@ -120,11 +120,12 @@ namespace NeMoOnnxSharp.Tests
                 fftLength: fftLength,
                 preemph: 0.0);
 
-            MethodInfo methodInfo1 = typeof(AudioToMFCCPreprocessor).GetMethod(
+            MethodInfo? methodInfo1 = typeof(AudioToMFCCPreprocessor).GetMethod(
                 "ReadFrameCenter", BindingFlags.NonPublic | BindingFlags.Instance);
-            MethodInfo methodInfo2 = typeof(AudioToMFCCPreprocessor).GetMethod(
+            MethodInfo? methodInfo2 = typeof(AudioToMFCCPreprocessor).GetMethod(
                 "ReadFrameCenterPreemphasis", BindingFlags.NonPublic | BindingFlags.Instance);
-
+            Assert.IsNotNull(methodInfo1);
+            Assert.IsNotNull(methodInfo2);
             var rng = new Random();
             short[] waveform = new short[1200];
             double[] frame1 = new double[fftLength];

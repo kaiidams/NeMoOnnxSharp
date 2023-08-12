@@ -17,7 +17,7 @@ namespace NeMoOnnxSharp
         private readonly int _nMelBands;
         private readonly string[] _labels;
 
-        private FrameVAD()
+        private FrameVAD(InferenceSession inferSess)
         {
             _nMelBands = 64;
             _processor = new AudioToMFCCPreprocessor(
@@ -42,16 +42,15 @@ namespace NeMoOnnxSharp
                 "background",
                 "speech"
             };
+            _inferSess = inferSess;
         }
 
-        public FrameVAD(string modelPath) : this()
+        public FrameVAD(string modelPath) : this(new InferenceSession(modelPath))
         {
-            _inferSess = new InferenceSession(modelPath);
         }
 
-        public FrameVAD(byte[] model) : this()
+        public FrameVAD(byte[] model) : this(new InferenceSession(model))
         {
-            _inferSess = new InferenceSession(model);
         }
 
         public void Dispose()

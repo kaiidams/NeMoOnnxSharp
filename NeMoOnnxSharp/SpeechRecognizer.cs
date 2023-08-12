@@ -21,7 +21,7 @@ namespace NeMoOnnxSharp
         private readonly InferenceSession _inferSess;
         private readonly int _nMelBands;
 
-        private SpeechRecognizer()
+        private SpeechRecognizer(InferenceSession inferSess)
         {
             _nMelBands = 64;
             _processor = new AudioToMelSpectrogramPreprocessor(
@@ -42,16 +42,15 @@ namespace NeMoOnnxSharp
                 postNormalize: true,
                 postNormalizeOffset: 1e-5);
             _tokenizer = new CharTokenizer(Vocabulary);
+            _inferSess = inferSess;
         }
 
-        public SpeechRecognizer(string modelPath) : this()
+        public SpeechRecognizer(string modelPath) : this(new InferenceSession(modelPath))
         {
-            _inferSess = new InferenceSession(modelPath);
         }
 
-        public SpeechRecognizer(byte[] model) : this()
+        public SpeechRecognizer(byte[] model) : this(new InferenceSession(model))
         {
-            _inferSess = new InferenceSession(model);
         }
 
         public void Dispose()
