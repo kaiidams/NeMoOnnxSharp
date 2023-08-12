@@ -56,58 +56,42 @@ namespace NeMoOnnxSharp.Tests
             string waveFile = Path.Combine(appDirPath, "Data", SampleWAVSpeechFile);
             waveform = WaveFile.ReadWAV(waveFile, SampleRate);
             processor = new AudioToMFCCPreprocessor(
-                sampleRate: SampleRate,
+                sampleRate: 16000,
                 window: WindowFunction.Hann,
-                windowLength: 400,
-                hopLength: 160,
-                fftLength: 512,
-                //preNormalize: 0.8,
-                preemph: 0.0,
-                center: false,
-                nMelBands: 64,
-                melMinHz: 0.0,
-                melMaxHz: 0.0,
-                htk: true,
-                melNormalize: MelNorm.None,
-                logOffset: 1e-6,
-                postNormalize: false);
+                windowSize: 0.025,
+                windowStride: 0.01,
+                nFFT: 512,
+                nMels: 64,
+                nMFCC: 64);
         }
 
         [TestMethod]
         public void TestSpectrogram()
         {
-            var x = processor.Spectrogram(waveform);
+            var x = processor.GetFeatures(waveform);
             AssertMSE("spectrogram.bin", x);
         }
 
         [TestMethod]
         public void TestMelSpectrogram()
         {
-            var x = processor.MelSpectrogram(waveform);
+            var x = processor.GetFeatures(waveform);
             AssertMSE("melspectrogram.bin", x);
         }
 
         [TestMethod]
         public void TestMFCC()
         {
-            var processor = new AudioToMFCCPreprocessor(
-                sampleRate: SampleRate,
+            processor = new AudioToMFCCPreprocessor(
+                sampleRate: 16000,
                 window: WindowFunction.Hann,
-                windowLength: 400,
-                hopLength: 160,
-                fftLength: 512,
+                windowSize: 0.025,
+                windowStride: 0.01,
+                nFFT: 512,
                 //preNormalize: 0.8,
-                preemph: 0.0,
-                center: true,
-                nMelBands: 64,
-                melMinHz: 0.0,
-                melMaxHz: 0.0,
-                htk: true,
-                melNormalize: MelNorm.None,
-                nMFCC: 64,
-                logOffset: 1e-6,
-                postNormalize: false);
-            var x = processor.MFCC(waveform);
+                nMels: 64,
+                nMFCC: 64);
+            var x = processor.GetFeatures(waveform);
         }
 
         [TestMethod]
@@ -116,9 +100,8 @@ namespace NeMoOnnxSharp.Tests
             int windowLength = 5;
             int fftLength = 9;
             var processor = new AudioToMFCCPreprocessor(
-                windowLength: windowLength,
-                fftLength: fftLength,
-                preemph: 0.0);
+                nWindowSize: windowLength,
+                nFFT: fftLength);
 
             MethodInfo? methodInfo1 = typeof(AudioToMFCCPreprocessor).GetMethod(
                 "ReadFrameCenter", BindingFlags.NonPublic | BindingFlags.Instance);

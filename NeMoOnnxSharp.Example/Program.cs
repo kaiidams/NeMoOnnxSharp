@@ -75,20 +75,12 @@ namespace NeMoOnnxSharp.Example
                 var processor = new AudioToMFCCPreprocessor(
                     sampleRate: 16000,
                     window: WindowFunction.Hann,
-                    windowLength: 400,
-                    hopLength: 160,
-                    fftLength: 512,
-                    preNormalize: 0.0,
-                    preemph: 0.0,
-                    center: false,
-                    nMelBands: 64,
-                    nMFCC: 64,
-                    melMinHz: 0.0,
-                    melMaxHz: 0.0,
-                    htk: true,
-                    melNormalize: MelNorm.None,
-                    logOffset: 1e-6,
-                    postNormalize: false);
+                    windowSize: 0.025,
+                    windowStride: 0.01,
+                    nFFT: 512,
+                    //preNormalize: 0.8,
+                    nMels: 64,
+                    nMFCC: 64);
                 using var vad = new FrameVAD(modelPath);
                 using var reader = File.OpenText(inputPath);
                 string? line;
@@ -185,7 +177,7 @@ namespace NeMoOnnxSharp.Example
                 nMels: 64,
                 nMFCC: 64,
                 fMin: 0.0,
-                fMax: 0.0,
+                fMax: null,
                 logMels: true,
                 melScale: MelScale.HTK,
                 melNorm: MelNorm.None);

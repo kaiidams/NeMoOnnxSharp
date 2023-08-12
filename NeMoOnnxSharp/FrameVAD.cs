@@ -23,20 +23,12 @@ namespace NeMoOnnxSharp
             _processor = new AudioToMFCCPreprocessor(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
-                windowLength: 400,
-                hopLength: 160,
-                fftLength: 512,
+                windowSize: 0.025,
+                windowStride: 0.01,
+                nFFT: 512,
                 //preNormalize: 0.8,
-                preemph: 0.0,
-                center: true,
-                nMelBands: 64,
-                melMinHz: 0.0,
-                melMaxHz: 0.0,
-                htk: true,
-                melNormalize: MelNorm.None,
-                nMFCC: 64,
-                logOffset: 1e-6,
-                postNormalize: false);
+                nMels: 64,
+                nMFCC: 64);
             _labels = new string[]
             {
                 "background",
