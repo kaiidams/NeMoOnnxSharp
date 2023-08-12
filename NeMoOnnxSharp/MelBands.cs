@@ -28,7 +28,7 @@ namespace NeMoOnnxSharp
         }
 
         public static void ToMelSpectrogram(
-            Span<double> spec, double[] melBands, int sampleRate,
+            Span<double> spec, double[] melBands, double sampleRate,
             int nFFT, int nMels,
             MelNorm norm,
             bool log, double logOffset,
@@ -47,7 +47,7 @@ namespace NeMoOnnxSharp
         }
 
         private static void ToMelSpectrogramNone(
-            Span<double> spec, double[] melBands, int sampleRate,
+            Span<double> spec, double[] melBands, double sampleRate,
             int nFFT, int nMels, double logOffset,
             Span<double> melspec)
         {
@@ -81,7 +81,7 @@ namespace NeMoOnnxSharp
         }
 
         private static void ToMelSpectrogramSlaney(
-            Span<double> spec, double[] melBands, int sampleRate,
+            Span<double> spec, double[] melBands, double sampleRate,
             int nFFT, int nMels, double logOffset,
             Span<double> melspec)
         {
