@@ -12,7 +12,7 @@ using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace NeMoOnnxSharp.Program
+namespace NeMoOnnxSharp.Example
 {
     internal static class Program
     {

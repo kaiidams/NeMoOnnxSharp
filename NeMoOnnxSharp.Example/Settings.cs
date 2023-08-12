@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Katsuya Iida.  All Rights Reserved.
 // See LICENSE in the project root for license information.
 
-namespace NeMoOnnxSharp.Program
+namespace NeMoOnnxSharp.Example
 {
     internal class Settings
     {

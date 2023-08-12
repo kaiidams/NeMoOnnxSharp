@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeMoOnnxSharp", "NeMoOnnxSh
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeMoOnnxSharp.Tests", "NeMoOnnxSharp.Tests\NeMoOnnxSharp.Tests.csproj", "{5126DAA8-6FFD-4B0A-8F85-9C98DCF64152}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeMoOnnxSharp.Program", "NeMoOnnxSharp.Program\NeMoOnnxSharp.Program.csproj", "{52E3A920-29D9-4E9E-AAE4-EC6A77A6A08D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeMoOnnxSharp.Example", "NeMoOnnxSharp.Example\NeMoOnnxSharp.Example.csproj", "{52E3A920-29D9-4E9E-AAE4-EC6A77A6A08D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
