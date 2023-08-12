@@ -69,7 +69,6 @@ namespace NeMoOnnxSharp
                 }
                 else
                 {
-                    // TODO
                     Span<short> temp = stackalloc short[_nWindowSize];
                     int start = inputOffset;
                     int end = inputOffset + _nWindowSize;
