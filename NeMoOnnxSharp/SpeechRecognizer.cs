@@ -1,4 +1,7 @@
-﻿using Microsoft.ML.OnnxRuntime;
+﻿// Copyright (c) Katsuya Iida.  All Rights Reserved.
+// See LICENSE in the project root for license information.
+
+using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using System;
 using System.Collections.Generic;
@@ -9,20 +12,46 @@ using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp
 {
-    public class SpeechRecognizer : IDisposable
+    public class SpeechRecognizer : ISpeechRecognizer
     {
         private const string Vocabulary = " abcdefghijklmnopqrstuvwxyz'_";
-        private readonly Regex mergeRx = new Regex(@"(.)\1+");
 
-        private readonly AudioToMelSpectrogramPreprocessor _preprocessor;
+        private readonly IAudioPreprocessor<short, float> _processor;
+        private readonly CharTokenizer _tokenizer;
         private readonly InferenceSession _inferSess;
         private readonly int _nMelBands;
 
-        public SpeechRecognizer(string filePath)
+        private SpeechRecognizer()
         {
             _nMelBands = 64;
-            _preprocessor = new AudioToMelSpectrogramPreprocessor();
-            _inferSess = new InferenceSession(filePath);
+            _processor = new AudioToMelSpectrogramPreprocessor(
+                sampleRate: 16000,
+                window: WindowFunction.Hann,
+                windowLength: 400,
+                hopLength: 160,
+                fftLength: 512,
+                preNormalize: 0.0,
+                preemph: 0.97,
+                center: true,
+                nMelBands: 64,
+                melMinHz: 0.0,
+                melMaxHz: 0.0,
+                htk: false,
+                melNormalize: MelNorm.Slaney,
+                logOffset: Math.Pow(2, -24),
+                postNormalize: true,
+                postNormalizeOffset: 1e-5);
+            _tokenizer = new CharTokenizer(Vocabulary);
+        }
+
+        public SpeechRecognizer(string modelPath) : this()
+        {
+            _inferSess = new InferenceSession(modelPath);
+        }
+
+        public SpeechRecognizer(byte[] model) : this()
+        {
+            _inferSess = new InferenceSession(model);
         }
 
         public void Dispose()
@@ -33,7 +62,8 @@ namespace NeMoOnnxSharp
         public string Recognize(short[] waveform)
         {
             string text = string.Empty;
-            var audioSignal = _preprocessor.Process(waveform);
+            var audioSignal = _processor.GetFeatures(waveform);
+            audioSignal = Transpose(audioSignal, _nMelBands);
             var container = new List<NamedOnnxValue>();
             var audioSignalData = new DenseTensor<float>(
                 audioSignal,
@@ -43,45 +73,47 @@ namespace NeMoOnnxSharp
             {
                 foreach (var score in res)
                 {
-                    var s = score.AsTensor<float>();
-                    int[] preds = new int[s.Dimensions[1]];
-                    for (int l = 0; l < preds.Length; l++)
-                    {
-                        int k = -1;
-                        float m = -10000.0f;
-                        for (int j = 0; j < s.Dimensions[2]; j++)
-                        {
-                            if (m < s[0, l, j])
-                            {
-                                k = j;
-                                m = s[0, l, j];
-                            }
-                        }
-                        preds[l] = k;
-                    }
-
-                    text = Decode(preds);
-                    text = MergeRepeated(text);
+                    long[] preds = ArgMax(score.AsTensor<float>());
+                    text = _tokenizer.Decode(preds);
+                    text = _tokenizer.MergeRepeated(text);
                 }
             }
             return text;
         }
 
-        private string Decode(int[] preds)
+        private float[] Transpose(float[] x, int cols)
         {
-            var chars = new char[preds.Length];
-            for (int i = 0; i < chars.Length; i++)
+            var y = new float[x.Length];
+            int rows = x.Length / cols;
+            for (int i = 0; i < rows; i++)
             {
-                chars[i] = Vocabulary[preds[i]];
+                for (int j = 0; j < cols; j++)
+                {
+                    y[j * rows + i] = x[i * cols + j];  
+                }
             }
-            return new string(chars);
+            return y;
         }
 
-        private string MergeRepeated(string text)
+        private long[] ArgMax(Tensor<float> score)
         {
-            text = mergeRx.Replace(text, "$1");
-            text = text.Replace("_", "");
-            return text;
+            long[] preds = new long[score.Dimensions[1]];
+            for (int l = 0; l < preds.Length; l++)
+            {
+                int k = -1;
+                float m = -10000.0f;
+                for (int j = 0; j < score.Dimensions[2]; j++)
+                {
+                    if (m < score[0, l, j])
+                    {
+                        k = j;
+                        m = score[0, l, j];
+                    }
+                }
+                preds[l] = k;
+            }
+
+            return preds;
         }
     }
 }
