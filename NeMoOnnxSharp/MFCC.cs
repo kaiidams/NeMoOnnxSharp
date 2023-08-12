@@ -71,9 +71,9 @@ namespace NeMoOnnxSharp
             FFT.CFFT(temp1, temp2, _nFFT);
             ToMagnitude(temp2, temp1);
             MelBands.ToMelSpectrogram(
-                temp2, _melBands, _sampleRate, _nFFT, _nMFCC, _melNorm, true, LogOffset, temp1);
+                temp2, _melBands, _sampleRate, _nFFT, _nMels, _melNorm, true, LogOffset, temp1);
             FFT.DCT2(temp1, temp2, _nMFCC);
-            for (int i = 0; i < _nMels; i++) output[i] = (float)temp2[i];
+            for (int i = 0; i < _nMFCC; i++) output[i] = (float)temp2[i];
         }
 
         private void ToMagnitude(Span<double> xr, Span<double> xi)
