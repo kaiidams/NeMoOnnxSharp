@@ -34,8 +34,6 @@ namespace NeMoOnnxSharp
         private readonly double _preNormalize;
         protected readonly double _preemph;
         protected readonly double[] _melBands;
-        protected readonly double[] _temp1;
-        protected readonly double[] _temp2;
         protected readonly int _nFFT;
         protected readonly int _features;
         private readonly MelNorm _melNormalizeType;
@@ -52,6 +50,7 @@ namespace NeMoOnnxSharp
             int? nWindowSize = null,
             int? nWindowStride = null,
             WindowFunction window = WindowFunction.Hann,
+            FeatureNormalize featureNormalize = FeatureNormalize.PerFeature,
             double preNormalize = 0.0,
             int? nFFT = null,
             double preemph = 0.97,
@@ -73,14 +72,16 @@ namespace NeMoOnnxSharp
             _window = Window.MakeWindow(window, nWindowSize ?? (int)(windowSize * sampleRate));
             _frameType = GetFrameType(center, preemph);
             _nWindowStride = nWindowStride ?? (int)(windowStride * sampleRate);
+            if (featureNormalize != FeatureNormalize.PerFeature)
+            {
+                throw new ArgumentException("Only FeatureNormalize.PerFeature is supported");
+            }
             _melBands = MelBands.MakeMelBands(
                 lowFreq, highFreq ?? sampleRate / 2,
                 features,
                 htk ? MelScale.HTK : MelScale.Slaney);
             _melNormalizeType = melNormalize;
             _nFFT = nFFT ?? (int)Math.Exp(Math.Ceiling(Math.Log(_window.Length, 2)));
-            _temp1 = new double[_nFFT];
-            _temp2 = new double[_nFFT];
             _features = features;
             _magPower = magPower;
             _log = log;
@@ -90,11 +91,6 @@ namespace NeMoOnnxSharp
         }
 
         public float[] GetFeatures(Span<short> waveform)
-        {
-            return GetFeatures(waveform.ToArray());
-        }
-
-        public float[] GetFeatures(short[] waveform)
         {
             double scale = GetScaleFactor(waveform);
             int outputStep = _features;
@@ -113,7 +109,7 @@ namespace NeMoOnnxSharp
             return output;
         }
 
-        private int GetOutputLength(short[] waveform)
+        private int GetOutputLength(Span<short> waveform)
         {
             if (_frameType == FrameType.Center || _frameType == FrameType.CenterPreemph)
             {
@@ -125,7 +121,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private double GetScaleFactor(short[] waveform)
+        private double GetScaleFactor(Span<short> waveform)
         {
             double scale;
             if (_preNormalize > 0)
@@ -140,7 +136,7 @@ namespace NeMoOnnxSharp
             return scale;
         }
 
-        private int MaxAbsValue(short[] waveform)
+        private int MaxAbsValue(Span<short> waveform)
         {
             int maxValue = 1;
             for (int i = 0; i < waveform.Length; i++)
@@ -152,43 +148,18 @@ namespace NeMoOnnxSharp
             return maxValue;
         }
 
-        public void SpectrogramStep(short[] waveform, int waveformOffset, double scale, float[] output, int outputOffset, int outputSize)
+        public void MelSpectrogramStep(Span<short> waveform, int waveformOffset, double scale, float[] output, int outputOffset)
         {
-            ReadFrame(waveform, waveformOffset, scale, _temp1);
-            FFT.CFFT(_temp1, _temp2, _nFFT);
-            ToMagnitude(_temp2, _temp1, _nFFT);
-            ToSpectrogram(_temp2, output, outputOffset, outputSize);
+            Span<double> temp1 = stackalloc double[_nFFT];
+            Span<double> temp2 = stackalloc double[_nFFT];
+            ReadFrame(waveform, waveformOffset, scale, temp1);
+            FFT.CFFT(temp1, temp2, _nFFT);
+            ToMagnitude(temp2, temp1, _nFFT);
+            ToMelSpectrogram(temp2, temp1);
+            for (int i = 0; i < _features; i++) output[outputOffset + i] = (float)temp1[i];
         }
 
-        public void MelSpectrogramStep(short[] waveform, int waveformOffset, double scale, float[] output, int outputOffset)
-        {
-            ReadFrame(waveform, waveformOffset, scale, _temp1);
-            FFT.CFFT(_temp1, _temp2, _nFFT);
-            ToMagnitude(_temp2, _temp1, _nFFT);
-            ToMelSpectrogram(_temp2, _temp1);
-            for (int i = 0; i < _features; i++) output[outputOffset + i] = (float)_temp1[i];
-        }
-
-        private void ToSpectrogram(double[] input, float[] output, int outputOffset, int outputSize)
-        {
-            if (_log)
-            {
-                for (int i = 0; i < outputSize; i++)
-                {
-                    double value = Math.Log(input[i] + _logZeroGuardValue);
-                    output[outputOffset + i] = (float)value;
-                }
-            }
-            else
-            {
-                for (int i = 0; i < outputSize; i++)
-                {
-                    output[outputOffset + i] = (float)input[i];
-                }
-            }
-        }
-
-        private void ToMelSpectrogram(double[] spec, Span<double> melspec)
+        private void ToMelSpectrogram(Span<double> spec, Span<double> melspec)
         {
             if (!_log) throw new NotImplementedException();
             switch (_melNormalizeType)
@@ -202,7 +173,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private void ToMelSpectrogramNone(double[] spec, Span<double> melspec)
+        private void ToMelSpectrogramNone(Span<double> spec, Span<double> melspec)
         {
             for (int i = 0; i < _features; i++)
             {
@@ -233,7 +204,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private void ToMelSpectrogramSlaney(double[] spec, Span<double> melspec)
+        private void ToMelSpectrogramSlaney(Span<double> spec, Span<double> melspec)
         {
             for (int i = 0; i < _features; i++)
             {
@@ -264,7 +235,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        protected void ReadFrame(short[] waveform, int offset, double scale, double[] frame)
+        protected void ReadFrame(Span<short> waveform, int offset, double scale, Span<double> frame)
         {
             switch (_frameType)
             {
@@ -282,7 +253,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private void ReadFrameNone(short[] waveform, int offset, double scale, double[] frame)
+        private void ReadFrameNone(Span<short> waveform, int offset, double scale, Span<double> frame)
         {
             for (int i = 0; i < _window.Length; i++)
             {
@@ -294,7 +265,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private void ReadFrameCenter(short[] waveform, int offset, double scale, double[] frame)
+        private void ReadFrameCenter(Span<short> waveform, int offset, double scale, Span<double> frame)
         {
             int frameOffset = frame.Length / 2 - _window.Length / 2;
             for (int i = 0; i < frameOffset; i++)
@@ -314,7 +285,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private void ReadFrameCenterPreemphasis(short[] waveform, int offset, double scale, double[] frame)
+        private void ReadFrameCenterPreemphasis(Span<short> waveform, int offset, double scale, Span<double> frame)
         {
             int frameOffset = (frame.Length - 1) / 2 - (_window.Length - 1) / 2;
             for (int i = 0; i < frameOffset; i++)
@@ -336,7 +307,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private void ToMagnitude(double[] xr, double[] xi, int length)
+        private void ToMagnitude(Span<double> xr, Span<double> xi, int length)
         {
             if (_magPower == 2)
             {
@@ -352,7 +323,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private static void ToAbsoluteMagnitude(double[] xr, double[] xi, int length)
+        private static void ToAbsoluteMagnitude(Span<double> xr, Span<double> xi, int length)
         {
             for (int i = 0; i < length; i++)
             {
@@ -360,7 +331,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private static void ToSquareMagnitude(double[] xr, double[] xi, int length)
+        private static void ToSquareMagnitude(Span<double> xr, Span<double> xi, int length)
         {
             for (int i = 0; i < length; i++)
             {
