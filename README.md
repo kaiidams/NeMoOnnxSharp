@@ -1,5 +1,7 @@
 # Speech recognizer with QuartzNet and ONNX Runtime
 
+[![build](https://github.com/kaiidams/NeMoOnnxSharp/actions/workflows/build-validation.yml/badge.svg)](https://github.com/kaiidams/NeMoOnnxSharp/actions/workflows/build-validation.yml)
+
 This repository explains how to export 
 [QuartzNet](https://arxiv.org/abs/1910.10261)
 of 

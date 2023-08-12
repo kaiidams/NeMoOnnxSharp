@@ -2,7 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Example
 {
     internal class Program
     {
