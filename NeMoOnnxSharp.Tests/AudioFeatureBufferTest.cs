@@ -47,42 +47,34 @@ namespace NeMoOnnxSharp.Tests
             return err / len;
         }
 
-        short[] waveform;
-        AudioToMFCCPreprocessor processor;
+        short[]? waveform;
 
-        public PreprocessorTest()
+        [TestInitialize]
+        public void TestInitialize()
         {
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             string waveFile = Path.Combine(appDirPath, "Data", SampleWAVSpeechFile);
             waveform = WaveFile.ReadWAV(waveFile, SampleRate);
-            processor = new AudioToMFCCPreprocessor(
-                sampleRate: 16000,
-                window: WindowFunction.Hann,
-                windowSize: 0.025,
-                windowStride: 0.01,
-                nFFT: 512,
-                nMels: 64,
-                nMFCC: 64);
-        }
-
-        [TestMethod]
-        public void TestSpectrogram()
-        {
-            var x = processor.GetFeatures(waveform);
-            AssertMSE("spectrogram.bin", x);
         }
 
         [TestMethod]
         public void TestMelSpectrogram()
         {
-            var x = processor.GetFeatures(waveform);
+            var preprocessor = new AudioToMelSpectrogramPreprocessor(
+                sampleRate: 16000,
+                window: WindowFunction.Hann,
+                windowSize: 0.02,
+                windowStride: 0.01,
+                nFFT: 512,
+                features: 64);
+            var x = preprocessor.GetFeatures(waveform);
             AssertMSE("melspectrogram.bin", x);
         }
 
         [TestMethod]
         public void TestMFCC()
         {
-            processor = new AudioToMFCCPreprocessor(
+            var preprocessor = new AudioToMFCCPreprocessor(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
                 windowSize: 0.025,
@@ -91,7 +83,7 @@ namespace NeMoOnnxSharp.Tests
                 //preNormalize: 0.8,
                 nMels: 64,
                 nMFCC: 64);
-            var x = processor.GetFeatures(waveform);
+            var x = preprocessor.GetFeatures(waveform);
         }
 
         [TestMethod]
@@ -99,7 +91,7 @@ namespace NeMoOnnxSharp.Tests
         {
             int windowLength = 5;
             int fftLength = 9;
-            var processor = new AudioToMFCCPreprocessor(
+            var preprocessor = new AudioToMFCCPreprocessor(
                 nWindowSize: windowLength,
                 nFFT: fftLength);
 
@@ -120,9 +112,9 @@ namespace NeMoOnnxSharp.Tests
                 int offset = rng.Next(waveform.Length);
                 double scale = rng.NextDouble();
                 object[] parameters1 = { waveform, offset, scale, frame1 };
-                methodInfo1.Invoke(processor, parameters1);
+                methodInfo1.Invoke(preprocessor, parameters1);
                 object[] parameters2 = { waveform, offset, scale, frame2 };
-                methodInfo2.Invoke(processor, parameters2);
+                methodInfo2.Invoke(preprocessor, parameters2);
                 double error = MSE(frame1, frame2);
                 Assert.IsTrue(error == 0);
             }
