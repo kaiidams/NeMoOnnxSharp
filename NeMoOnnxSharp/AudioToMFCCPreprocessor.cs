@@ -71,6 +71,22 @@ namespace NeMoOnnxSharp
                 {
                     // TODO
                     Span<short> temp = stackalloc short[_nWindowSize];
+                    int start = inputOffset;
+                    int end = inputOffset + _nWindowSize;
+                    int offset = 0;
+                    if (start < 0)
+                    {
+                        offset = -start;
+                        start = 0;
+                    }
+                    if (end >= input.Length)
+                    {
+                        end = input.Length;
+                    }
+                    if (end > start)
+                    {
+                        input.Slice(start, end - start).CopyTo(temp.Slice(offset));
+                    }
                     _featurizer.GetFeatures(
                         temp,
                         output.AsSpan(outputOffset, outputStep));
