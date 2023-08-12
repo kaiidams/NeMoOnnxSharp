@@ -10,9 +10,9 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/NeMoOnnxSharp/bin/Debug/net7.0/NeMoOnnxSharp.dll",
+            "program": "${workspaceFolder}/NeMoOnnxSharp.Program/bin/Debug/net7.0/NeMoOnnxSharp.Program.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/NeMoOnnxSharp",
+            "cwd": "${workspaceFolder}/NeMoOnnxSharp.Program",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": false
