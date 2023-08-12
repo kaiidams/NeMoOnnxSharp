@@ -12,7 +12,7 @@ using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Program
 {
     internal static class Program
     {
@@ -25,6 +25,10 @@ namespace NeMoOnnxSharp
                 .AddEnvironmentVariables()
                 .Build();
             var settings = config.GetRequiredSection("Settings").Get<Settings>();
+            if (settings == null)
+            {
+                throw new InvalidDataException();
+            }
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
 
             if (settings.Task == "transcript")
@@ -35,7 +39,7 @@ namespace NeMoOnnxSharp
 
                 using var recognizer = new SpeechRecognizer(modelPath);
                 using var reader = File.OpenText(inputPath);
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     string[] parts = line.Split("|");
@@ -55,7 +59,7 @@ namespace NeMoOnnxSharp
             }
             else if (settings.Task == "streamaudio")
             {
-                var modelPaths = await DownloadModelsAsync(new string[]
+                var modelPaths = await DownloadModelsAsync(new string?[]
                 {
                     settings.VadModel, settings.AsrModel
                 });
@@ -87,7 +91,7 @@ namespace NeMoOnnxSharp
                     postNormalize: false);
                 using var vad = new FrameVAD(modelPath);
                 using var reader = File.OpenText(inputPath);
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     string[] parts = line.Split("|");
@@ -137,13 +141,13 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private static async Task<string> DownloadModelAsync(string model)
+        private static async Task<string> DownloadModelAsync(string? model)
         {
-            var modelPaths = await DownloadModelsAsync(new string[] { model });
+            var modelPaths = await DownloadModelsAsync(new string?[] { model });
             return modelPaths[0];
         }
 
-        private static async Task<string[]> DownloadModelsAsync(string[] models)
+        private static async Task<string[]> DownloadModelsAsync(string?[] models)
         {
             string appDirPath = Path.Combine(
                 Environment.GetFolderPath(
@@ -154,8 +158,12 @@ namespace NeMoOnnxSharp
             using var httpClient = new HttpClient();
             var downloader = new ModelDownloader(httpClient, cacheDirectoryPath);
             var modelPaths = new List<string>();
-            foreach (string model in models)
+            foreach (string? model in models)
             {
+                if (string.IsNullOrEmpty(model))
+                {
+                    throw new InvalidDataException();
+                }
                 var bundle = ModelBundle.GetBundle(model);
                 Console.WriteLine("Model: {0}", model);
                 string fileName = GetFileNameFromUrl(bundle.ModelUrl);
@@ -300,7 +308,7 @@ namespace NeMoOnnxSharp
             string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
             using var reader = File.OpenText(inputPath);
-            string line;
+            string? line;
             var stream = new MemoryStream();
             stream.Write(new byte[32000]);
             while ((line = reader.ReadLine()) != null)
