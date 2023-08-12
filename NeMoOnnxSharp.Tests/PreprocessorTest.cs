@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NuGet.Frameworks;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -9,9 +10,9 @@ using System.Security.Cryptography;
 namespace NeMoOnnxSharp.Tests
 {
     [TestClass]
-    public class AudioFeature_bufferTest
+    public class AudioFeatureBufferTest
     {
-        private AudioFeatureBuffer<short, float> _buffer;
+        private AudioFeatureBuffer<short, float>? _buffer;
 
         [TestInitialize] 
         public void Initialize()
@@ -37,6 +38,7 @@ namespace NeMoOnnxSharp.Tests
         [TestMethod]
         public void Test1()
         {
+            Assert.IsNotNull(_buffer);
             int written;
             Assert.AreEqual(0, _buffer.OutputCount);
             written = _buffer.Write(new short[399]);
@@ -58,6 +60,7 @@ namespace NeMoOnnxSharp.Tests
         [TestMethod]
         public void Test2()
         {
+            Assert.IsNotNull(_buffer);
             int totalWritten = 0;
             int totalOutput = 0;
             var rng = new Random();

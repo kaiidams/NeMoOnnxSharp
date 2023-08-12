@@ -42,7 +42,7 @@ namespace NeMoOnnxSharp.Tests
             Assert.AreEqual(bytes.Length, SampleWAVSpeech2Length * 2 + 44);
         }
 
-        private bool IsArraysEqual<T>(T[] x, T[] y)
+        private bool IsArraysEqual<T>(T[] x, T[] y) where T : struct
         {
             if (x.Length != y.Length) return false;
             for (int i = 0; i < x.Length; i++)

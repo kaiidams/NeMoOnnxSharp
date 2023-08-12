@@ -31,7 +31,7 @@ namespace NeMoOnnxSharp.Example
             }
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
 
-            if (settings.Task == "transcript")
+            if (settings.Task == "transcribe")
             {
                 string modelPath = await DownloadModelAsync(settings.AsrModel);
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
@@ -51,7 +51,7 @@ namespace NeMoOnnxSharp.Example
                     Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
                 }
             }
-            if (settings.Task == "socketaudio")
+            else if (settings.Task == "socketaudio")
             {
                 string modelPath = await DownloadModelAsync(settings.VadModel);
                 RunSocketAudio(modelPath);
