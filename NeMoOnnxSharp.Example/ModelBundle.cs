@@ -3,7 +3,7 @@
 
 using System;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Example
 {
     public class ModelBundle
     {

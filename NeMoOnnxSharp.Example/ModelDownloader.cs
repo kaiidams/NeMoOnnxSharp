@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Example
 {
     public class ModelDownloader
     {
