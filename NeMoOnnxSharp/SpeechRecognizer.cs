@@ -30,11 +30,7 @@ namespace NeMoOnnxSharp
                 windowSize: 0.02,
                 windowStride: 0.01,
                 nFFT: 512,
-                preemph: 0.97,
-                center: true,
-                features: _features,
-                postNormalize: true,
-                postNormalizeOffset: 1e-5);
+                features: _features);
             _tokenizer = new CharTokenizer(Vocabulary);
             _inferSess = inferSess;
         }

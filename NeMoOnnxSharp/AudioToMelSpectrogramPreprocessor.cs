@@ -15,6 +15,8 @@ namespace NeMoOnnxSharp
             CenterPreemph
         }
 
+        private const double FeatureStdOffset = 1e-5;
+
         private static FrameType GetFrameType(bool center, double preemph)
         {
             if (preemph == 0.0)
@@ -31,6 +33,7 @@ namespace NeMoOnnxSharp
         protected readonly double[] _window;
         private readonly FrameType _frameType;
         protected readonly int _nWindowStride;
+        protected readonly FeatureNormalize _normalize;
         private readonly double _preNormalize;
         protected readonly double _preemph;
         protected readonly double[] _melBands;
@@ -40,8 +43,6 @@ namespace NeMoOnnxSharp
         private readonly int _magPower;
         private readonly double _logZeroGuardValue;
         private readonly bool _log;
-        private readonly bool _postNormalize;
-        private readonly double _postNormalizeOffset;
 
         public AudioToMelSpectrogramPreprocessor(
             int sampleRate = 16000,
@@ -50,7 +51,7 @@ namespace NeMoOnnxSharp
             int? nWindowSize = null,
             int? nWindowStride = null,
             WindowFunction window = WindowFunction.Hann,
-            FeatureNormalize featureNormalize = FeatureNormalize.PerFeature,
+            FeatureNormalize normalize = FeatureNormalize.PerFeature,
             double preNormalize = 0.0,
             int? nFFT = null,
             double preemph = 0.97,
@@ -62,9 +63,7 @@ namespace NeMoOnnxSharp
             MelNorm melNorm = MelNorm.Slaney,
             bool log = true,
             double? logZeroGuardValue = null,
-            int magPower = 2,
-            bool postNormalize = false,
-            double postNormalizeOffset = 1e-5)
+            int magPower = 2)
         {
             _sampleRate = sampleRate;
             _preNormalize = preNormalize;
@@ -72,7 +71,8 @@ namespace NeMoOnnxSharp
             _window = Window.MakeWindow(window, nWindowSize ?? (int)(windowSize * sampleRate));
             _frameType = GetFrameType(center, preemph);
             _nWindowStride = nWindowStride ?? (int)(windowStride * sampleRate);
-            if (featureNormalize != FeatureNormalize.PerFeature)
+            _normalize = normalize;
+            if (normalize != FeatureNormalize.PerFeature)
             {
                 throw new ArgumentException("Only FeatureNormalize.PerFeature is supported");
             }
@@ -86,8 +86,6 @@ namespace NeMoOnnxSharp
             _magPower = magPower;
             _log = log;
             _logZeroGuardValue = logZeroGuardValue ?? Math.Pow(2, -24);
-            _postNormalize = postNormalize;
-            _postNormalizeOffset = postNormalizeOffset;
         }
 
         public float[] GetFeatures(Span<short> input)
@@ -102,9 +100,9 @@ namespace NeMoOnnxSharp
                 MelSpectrogramStep(input, waveformOffset, scale, output.AsSpan(outputOffset));
                 waveformOffset += _nWindowStride;
             }
-            if (_postNormalize)
+            if (_normalize != FeatureNormalize.None)
             {
-                PostNormalize(output, outputStep);
+                NormalizeBatch(output, outputStep);
             }
             return output;
         }
@@ -266,7 +264,7 @@ namespace NeMoOnnxSharp
             }
         }
 
-        private void PostNormalize(float[] output, int outputStep)
+        private void NormalizeBatch(float[] output, int outputStep)
         {
             int melspecLength = output.Length / outputStep;
             for (int i = 0; i < outputStep; i++)
@@ -285,7 +283,7 @@ namespace NeMoOnnxSharp
                     sum += v * v;
                 }
                 double std = Math.Sqrt(sum / melspecLength);
-                float invStd = (float)(1.0 / (_postNormalizeOffset + std));
+                float invStd = (float)(1.0 / (FeatureStdOffset + std));
 
                 for (int j = 0; j < melspecLength; j++)
                 {

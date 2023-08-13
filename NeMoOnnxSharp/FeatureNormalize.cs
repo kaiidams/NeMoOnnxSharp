@@ -5,6 +5,7 @@ namespace NeMoOnnxSharp
 {
     public enum FeatureNormalize
     {
+        None,
         PerFeature,
         AllFeatures
     }

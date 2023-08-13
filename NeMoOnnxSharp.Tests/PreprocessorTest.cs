@@ -1,87 +1,87 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NuGet.Frameworks;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 
 namespace NeMoOnnxSharp.Tests
 {
     [TestClass]
-    public class AudioFeatureBufferTest
+    public class PreprocessorTest
     {
-        private AudioFeatureBuffer<short, float>? _buffer;
+        private const int SampleRate = 16000;
+        private const string SampleWAVSpeechFile = "61-70968-0000.wav";
 
-        [TestInitialize] 
+        private static float[] ReadData(string file)
+        {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string path = Path.Combine(appDirPath, "Data", file);
+            var bytes = File.ReadAllBytes(path);
+            return MemoryMarshal.Cast<byte, float>(bytes).ToArray();
+        }
+
+        private static void AssertMSE(string path, float[] x, double threshold = 1e-3)
+        {
+            var truth = ReadData(path);
+            double mse = MSE(truth, x);
+            Console.WriteLine("MSE: {0}", mse);
+            Assert.IsTrue(mse < threshold);
+        }
+
+        private static double MSE(float[] a, float[] b)
+        {
+            if (a.Length != b.Length) throw new ArgumentException();
+            int len = Math.Min(a.Length, b.Length);
+            double err = 0.0;
+            for (int i = 0; i < len; i++)
+            {
+                double diff = a[i] - b[i];
+                err += diff * diff;
+            }
+            return err / len;
+        }
+
+        short[]? audioSignal;
+
+        [TestInitialize]
         public void Initialize()
         {
-            int sampleRate = 16000;
-            var transform = new MFCC(
-                sampleRate: sampleRate,
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string waveFile = Path.Combine(appDirPath, "Data", SampleWAVSpeechFile);
+            audioSignal = WaveFile.ReadWAV(waveFile, SampleRate);
+        }
+
+        [TestMethod]
+        public void TestMelSpectrogram()
+        {
+            var preprocessor = new AudioToMelSpectrogramPreprocessor(
+                sampleRate: 16000,
                 window: WindowFunction.Hann,
-                winLength: 400,
+                windowSize: 0.02,
+                windowStride: 0.01,
                 nFFT: 512,
+                features: 64);
+            var x = preprocessor.GetFeatures(audioSignal);
+            var y = new float[((x.Length / 64 + 15) / 16) * 16 * 64];
+            Array.Copy(x, y, x.Length);
+            AssertMSE("mel_spectrogram.bin", y);
+        }
+
+        [TestMethod]
+        public void TestMFCC()
+        {
+            var preprocessor = new AudioToMFCCPreprocessor(
+                sampleRate: 16000,
+                windowSize: 0.025,
+                windowStride: 0.01,
+                //preNormalize: 0.8,
+                window: WindowFunction.Hann,
                 nMels: 64,
                 nMFCC: 64,
-                fMin: 0.0,
-                fMax: 0.0,
-                logMels: true,
-                melScale: MelScale.HTK,
-                melNorm: MelNorm.None);
-            _buffer = new AudioFeatureBuffer<short, float>(
-                transform,
-                hopLength: 160);
-        }
-
-        [TestMethod]
-        public void Test1()
-        {
-            Assert.IsNotNull(_buffer);
-            int written;
-            Assert.AreEqual(0, _buffer.OutputCount);
-            written = _buffer.Write(new short[399]);
-            Assert.AreEqual(399, written);
-            Assert.AreEqual(0, _buffer.OutputCount);
-            written = _buffer.Write(new short[1]);
-            Assert.AreEqual(1, written);
-            Assert.AreEqual(64, _buffer.OutputCount);
-            _buffer.ConsumeOutput(64);
-            Assert.AreEqual(0, _buffer.OutputCount);
-            written = _buffer.Write(new short[160 * 3]);
-            Assert.AreEqual(160 * 3, written);
-            Assert.AreEqual(64 * 3, _buffer.OutputCount);
-            written = _buffer.Write(new short[480]);
-            Assert.AreEqual(480, written);
-            Assert.AreEqual(64 * 6, _buffer.OutputCount);
-        }
-
-        [TestMethod]
-        public void Test2()
-        {
-            Assert.IsNotNull(_buffer);
-            int totalWritten = 0;
-            int totalOutput = 0;
-            var rng = new Random();
-            for (int i = 0; i < 1000; i++)
-            {
-                int n = rng.Next(1024);
-                int written = _buffer.Write(new short[n]);
-                Assert.AreEqual(0, _buffer.OutputCount % 64);
-                totalWritten += written;
-                totalOutput += _buffer.OutputCount;
-                if (totalWritten < 400)
-                {
-                    Assert.AreEqual(0, totalOutput);
-                }
-                else
-                {
-                    int m = (totalWritten - 400) / 160 + 1;
-                    Assert.AreEqual(m * 64, totalOutput);
-                }
-                _buffer.ConsumeOutput(_buffer.OutputCount);
-            }
+                nFFT: 512);
+            var processedSignal = preprocessor.GetFeatures(audioSignal);
+            AssertMSE("mfcc.bin", processedSignal, threshold: 1e-2);
         }
     }
 }

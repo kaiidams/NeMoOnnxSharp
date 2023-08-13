@@ -12,8 +12,9 @@
   <ItemGroup>
     <None Remove="Data\61-70968-0000-mod.wav" />
     <None Remove="Data\61-70968-0000.wav" />
-    <None Remove="Data\make_test.py" />
     <None Remove="Data\melspectrogram.bin" />
+    <None Remove="Data\mel_spectrogram.bin" />
+    <None Remove="Data\mfcc.bin" />
     <None Remove="Data\spectrogram.bin" />
   </ItemGroup>
 
@@ -24,13 +25,10 @@
     <Content Include="Data\61-70968-0000.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Data\make_test.py">
+    <Content Include="Data\mel_spectrogram.bin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Data\melspectrogram.bin">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Data\spectrogram.bin">
+    <Content Include="Data\mfcc.bin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -44,6 +42,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NeMoOnnxSharp\NeMoOnnxSharp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Data\make_test.py">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
