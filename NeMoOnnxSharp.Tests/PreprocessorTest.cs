@@ -63,6 +63,7 @@ namespace NeMoOnnxSharp.Tests
                 nFFT: 512,
                 features: 64);
             var x = preprocessor.GetFeatures(audioSignal);
+            // NeMo pads the result to 16 time staps.
             var y = new float[((x.Length / 64 + 15) / 16) * 16 * 64];
             Array.Copy(x, y, x.Length);
             AssertMSE("mel_spectrogram.bin", y);
