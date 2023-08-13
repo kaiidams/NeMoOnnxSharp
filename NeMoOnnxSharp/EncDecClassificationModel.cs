@@ -28,10 +28,12 @@ namespace NeMoOnnxSharp
             "speech"
         };
 
-    private readonly IAudioPreprocessor<short, float> _processor;
+        private readonly IAudioPreprocessor<short, float> _processor;
         private readonly InferenceSession _inferSess;
         private readonly int _nMelBands;
         private readonly string[] _labels;
+
+        public IAudioPreprocessor<short, float> Processor => _processor;
 
         private EncDecClassificationModel(InferenceSession inferSess, bool speechCommands)
         {

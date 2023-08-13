@@ -21,6 +21,8 @@ namespace NeMoOnnxSharp
         private readonly InferenceSession _inferSess;
         private readonly int _features;
 
+        public IAudioPreprocessor<short, float> Processor => _processor;
+
         private EncDecCTCModel(InferenceSession inferSess)
         {
             _features = 64;

@@ -4,14 +4,12 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
-using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -81,16 +79,6 @@ namespace NeMoOnnxSharp.Example
                 string modelPath = await DownloadModelAsync(settings.VADModel);
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
-
-                var processor = new AudioToMFCCPreprocessor(
-                    sampleRate: 16000,
-                    window: WindowFunction.Hann,
-                    windowSize: 0.025,
-                    windowStride: 0.01,
-                    nFFT: 512,
-                    //preNormalize: 0.8,
-                    nMels: 64,
-                    nMFCC: 64);
                 using var vad = new EncDecClassificationModel(modelPath);
                 using var reader = File.OpenText(inputPath);
                 string? line;
@@ -166,7 +154,7 @@ namespace NeMoOnnxSharp.Example
                 {
                     throw new InvalidDataException();
                 }
-                var info = PretrainedModelInfo.GetInfo(model);
+                var info = PretrainedModelInfo.Get(model);
                 string fileName = GetFileNameFromUrl(info.Location);
                 string filePath = Path.Combine(cacheDirectoryPath, fileName);
                 Console.WriteLine("Model: {0}", model);
