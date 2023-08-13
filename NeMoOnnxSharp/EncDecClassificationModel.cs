@@ -1,0 +1,119 @@
+﻿// Copyright (c) Katsuya Iida.  All Rights Reserved.
+// See LICENSE in the project root for license information.
+
+using Microsoft.ML.OnnxRuntime;
+using Microsoft.ML.OnnxRuntime.Tensors;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace NeMoOnnxSharp
+{
+    public class EncDecClassificationModel : ASRModel, IDisposable
+    {
+        private static readonly string[] SpeechCommandsLabels = new string[]
+        {
+            "visual", "wow", "learn", "backward", "dog",
+            "two", "left", "happy", "nine", "go",
+            "up", "bed", "stop", "one", "zero",
+            "tree", "seven", "on", "four", "bird",
+            "right", "eight", "no", "six", "forward",
+            "house", "marvin", "sheila", "five", "off",
+            "three", "down", "cat", "follow", "yes"
+        };
+        private static readonly string[] VADLabels = new string[]
+        {
+            "background",
+            "speech"
+        };
+
+    private readonly IAudioPreprocessor<short, float> _processor;
+        private readonly InferenceSession _inferSess;
+        private readonly int _nMelBands;
+        private readonly string[] _labels;
+
+        private EncDecClassificationModel(InferenceSession inferSess, bool speechCommands)
+        {
+            _nMelBands = 64;
+            _processor = new AudioToMFCCPreprocessor(
+                sampleRate: 16000,
+                window: WindowFunction.Hann,
+                windowSize: 0.025,
+                windowStride: 0.01,
+                nFFT: 512,
+                //preNormalize: 0.8,
+                nMels: 64,
+                nMFCC: 64);
+            _labels = speechCommands ? SpeechCommandsLabels : VADLabels;
+            _inferSess = inferSess;
+        }
+
+        public EncDecClassificationModel(string modelPath, bool speechCommands = false)
+            : this(new InferenceSession(modelPath), speechCommands)
+        {
+        }
+
+        public EncDecClassificationModel(byte[] model, bool speechCommands = false)
+            : this(new InferenceSession(model), speechCommands)
+        {
+        }
+
+        public void Dispose()
+        {
+            _inferSess.Dispose();
+        }
+
+        public override string Transcribe(short[] inputSignal)
+        {
+            string text = string.Empty;
+            var processedSignal = _processor.GetFeatures(inputSignal);
+            processedSignal = TransposeInputSignal(processedSignal, _nMelBands);
+            var container = new List<NamedOnnxValue>();
+            var audioSignalData = new DenseTensor<float>(
+                processedSignal,
+                new int[3] { 1, _nMelBands, processedSignal.Length / _nMelBands });
+            container.Add(NamedOnnxValue.CreateFromTensor("audio_signal", audioSignalData));
+            using (var res = _inferSess.Run(container, new string[] { "logits" }))
+            {
+                var scoreTensor = res.First();
+                long pred = ArgMax(scoreTensor.AsTensor<float>());
+                text = _labels[pred];
+            }
+            return text;
+        }
+
+        public double PredictStep(Span<float> processedSignal)
+        {
+            var transposedProcessedSignal = TransposeInputSignal(processedSignal, _nMelBands);
+            var container = new List<NamedOnnxValue>();
+            var audioSignalData = new DenseTensor<float>(
+                transposedProcessedSignal,
+                new int[3] { 1, _nMelBands, transposedProcessedSignal.Length / _nMelBands });
+            container.Add(NamedOnnxValue.CreateFromTensor("audio_signal", audioSignalData));
+            double score;
+            using (var res = _inferSess.Run(container, new string[] { "logits" }))
+            {
+                var scoreTensor = res.First();
+                float[] scores = scoreTensor.AsTensor<float>().ToArray();
+                score = 1.0 / (1.0 + Math.Exp(scores[0] - scores[1]));
+            }
+            return score;
+        }
+
+        private long ArgMax(Tensor<float> score)
+        {
+            int k = -1;
+            float m = -10000.0f;
+            for (int j = 0; j < score.Dimensions[1]; j++)
+            {
+                if (m < score[0, j])
+                {
+                    k = j;
+                    m = score[0, j];
+                }
+            }
+            return k;
+        }
+    }
+}
