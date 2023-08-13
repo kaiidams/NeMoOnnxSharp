@@ -7,6 +7,7 @@ using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp.Example
@@ -61,7 +62,7 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
-        public async Task<string> MayDownloadAsync(string fileName, string url, string sha256)
+        public async Task<string> MayDownloadAsync(string fileName, string url, string sha256, CancellationToken cancellationToken = default)
         {
             Directory.CreateDirectory(_cacheDirectoryPath);
 
@@ -72,7 +73,7 @@ namespace NeMoOnnxSharp.Example
             }
             else
             {
-                await Download(url, cacheFilePath);
+                await DownloadAsync(url, cacheFilePath);
                 if (!CheckCacheFile(cacheFilePath, sha256))
                 {
                     File.Delete(cacheFilePath);
@@ -82,25 +83,22 @@ namespace NeMoOnnxSharp.Example
             return cacheFilePath;
         }
 
-        private async Task Download(string url, string path)
+        private async Task DownloadAsync(string url, string path, CancellationToken cancellationToken = default)
         {
-            using (var response = await _httpClient.GetAsync(url))
+            using (var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
             {
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new InvalidDataException();
-                }
+                response.EnsureSuccessStatusCode();
                 long? contentLength = response.Content.Headers.ContentLength;
-                using (var reader = await response.Content.ReadAsStreamAsync())
+                using (var reader = await response.Content.ReadAsStreamAsync(cancellationToken))
                 {
                     using (var writer = File.OpenWrite(path))
                     {
                         var lastDateTime = DateTime.UtcNow;
                         byte[] buffer = new byte[4096];
                         int bytesRead;
-                        while ((bytesRead = await reader.ReadAsync(buffer, 0, buffer.Length)) != 0)
+                        while ((bytesRead = await reader.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) != 0)
                         {
-                            await writer.WriteAsync(buffer, 0, bytesRead);
+                            await writer.WriteAsync(buffer, 0, bytesRead, cancellationToken);
                             var currentDateTime = DateTime.UtcNow;
                             if ((lastDateTime - currentDateTime).Seconds >= 1)
                             {

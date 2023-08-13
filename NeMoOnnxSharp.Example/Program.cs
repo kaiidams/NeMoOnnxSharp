@@ -165,10 +165,10 @@ namespace NeMoOnnxSharp.Example
                 {
                     throw new InvalidDataException();
                 }
-                var bundle = ModelBundle.GetBundle(model);
+                var bundle = PretrainedModelInfo.GetInfo(model);
                 Console.WriteLine("Model: {0}", model);
-                string fileName = GetFileNameFromUrl(bundle.ModelUrl);
-                string modelPath = await downloader.MayDownloadAsync(fileName, bundle.ModelUrl, bundle.Hash);
+                string fileName = GetFileNameFromUrl(bundle.Location);
+                string modelPath = await downloader.MayDownloadAsync(fileName, bundle.Location, bundle.Hash);
                 modelPaths.Add(modelPath);
             }
             return modelPaths.ToArray();
@@ -324,16 +324,6 @@ namespace NeMoOnnxSharp.Example
             }
             stream.Seek(0, SeekOrigin.Begin);
             return stream;
-        }
-
-        private static float[] ReadBinaryBuffer(string path)
-        {
-            using var stream = File.Open(path, FileMode.Open);
-            using var reader = new BinaryReader(stream, Encoding.UTF8, false);
-            int m = reader.ReadInt32();
-            int n = reader.ReadInt32();
-            var bytes = reader.ReadBytes(m * n * 4);
-            return MemoryMarshal.Cast<byte, float>(bytes).ToArray();
         }
 
         private static string GetFileNameFromUrl(string url)
