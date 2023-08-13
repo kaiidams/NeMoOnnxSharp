@@ -1,20 +1,41 @@
-﻿using System;
+﻿// Copyright (c) Katsuya Iida.  All Rights Reserved.
+// See LICENSE in the project root for license information.
+
+using System;
 using System.IO;
-using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace NeMoOnnxSharp.Example
 {
-    internal class Program
+    internal static class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
+        {
+            string task = args.Length == 0 ? "transcribe" : args[0];
+
+            if (task == "transcribe")
+            {
+                await Transcribe();
+            }
+            else if (task == "vad")
+            {
+                await FramePredict(false);
+            }
+            else if (task == "mbn")
+            {
+                await FramePredict(true);
+            }
+        }
+
+        static async Task Transcribe()
         {
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
-            string modelPath = Path.Combine(appDirPath, "QuartzNet15x5Base-En.onnx");
+            string modelPath = await DownloadModelAsync("stt_en_quartznet15x5");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
-            int sampleRate = 16000;
-
-            using var recognizer = new EncDecCTCModel(modelPath);
+            using var model = new EncDecCTCModel(modelPath);
             using var reader = File.OpenText(inputPath);
             string? line;
             while ((line = reader.ReadLine()) != null)
@@ -23,10 +44,59 @@ namespace NeMoOnnxSharp.Example
                 string name = parts[0];
                 string targetText = parts[1];
                 string waveFile = Path.Combine(inputDirPath, name);
-                var audioSignal = WaveFile.ReadWAV(waveFile, sampleRate);
-                string predictText = recognizer.Transcribe(audioSignal);
+                var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
+                string predictText = model.Transcribe(audioSignal);
                 Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
             }
+        }
+
+        static async Task FramePredict(bool mbn)
+        {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string modelPath = await DownloadModelAsync(
+                mbn ? "commandrecognition_en_matchboxnet3x1x64_v2" : "vad_marblenet");
+            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
+            string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
+            using var model = new EncDecClassificationModel(modelPath, mbn);
+            var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
+            double windowStride = 0.10;
+            double windowSize = mbn ? 1.28 : 0.15;
+            int sampleRate = 16000;
+            int nWindowStride = (int)(windowStride * sampleRate);
+            int nWindowSize = (int)(windowSize * sampleRate);
+            var buffer = new short[audioSignal.Length + nWindowSize];
+            audioSignal.CopyTo(buffer.AsSpan(nWindowSize / 2));
+            for (int offset = 0; offset + nWindowSize <= buffer.Length; offset += nWindowStride)
+            {
+                string predictedText = model.Transcribe(buffer.AsSpan(offset, nWindowSize));
+                double t = (double)offset / sampleRate;
+                Console.WriteLine("time: {0:0.000}, predicted: {1}", t, predictedText);
+            }
+        }
+
+        private static async Task<string> DownloadModelAsync(string model)
+        {
+            using var downloader = new ModelDownloader();
+            var info = PretrainedModelInfo.Get(model);
+            string fileName = GetFileNameFromUrl(info.Location);
+            Console.WriteLine("Model: {0}", model);
+            await downloader.MayDownloadAsync(fileName, info.Location, info.Hash);
+            return fileName;
+        }
+
+        private static string GetFileNameFromUrl(string url)
+        {
+            int slashIndex = url.LastIndexOf("/");
+            if (slashIndex == -1)
+            {
+                throw new ArgumentException();
+            }
+            string fileName = url.Substring(slashIndex + 1);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                throw new ArgumentException();
+            }
+            return fileName;
         }
     }
 }

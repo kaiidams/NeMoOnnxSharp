@@ -7,16 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="QuartzNet15x5Base-En.onnx" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="QuartzNet15x5Base-En.onnx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.15.1" />
   </ItemGroup>
 
