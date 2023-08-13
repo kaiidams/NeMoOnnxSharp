@@ -83,7 +83,7 @@ namespace NeMoOnnxSharp
             return text;
         }
 
-        public double PredictStep(Span<float> processedSignal)
+        public float[] Predict(Span<float> processedSignal)
         {
             var transposedProcessedSignal = TransposeInputSignal(processedSignal, _nMelBands);
             var container = new List<NamedOnnxValue>();
@@ -91,20 +91,19 @@ namespace NeMoOnnxSharp
                 transposedProcessedSignal,
                 new int[3] { 1, _nMelBands, transposedProcessedSignal.Length / _nMelBands });
             container.Add(NamedOnnxValue.CreateFromTensor("audio_signal", audioSignalData));
-            double score;
+            float[] logits;
             using (var res = _inferSess.Run(container, new string[] { "logits" }))
             {
-                var scoreTensor = res.First();
-                float[] scores = scoreTensor.AsTensor<float>().ToArray();
-                score = 1.0 / (1.0 + Math.Exp(scores[0] - scores[1]));
+                var logitsTensor = res.First();
+                logits = logitsTensor.AsTensor<float>().ToArray();
             }
-            return score;
+            return logits;
         }
 
         private long ArgMax(Tensor<float> score)
         {
             int k = -1;
-            float m = -10000.0f;
+            float m = float.MinValue;
             for (int j = 0; j < score.Dimensions[1]; j++)
             {
                 if (m < score[0, j])

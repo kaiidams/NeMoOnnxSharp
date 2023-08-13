@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -156,8 +157,8 @@ namespace NeMoOnnxSharp.Example
                     Environment.SpecialFolderOption.DoNotVerify),
                 AppName);
             string cacheDirectoryPath = Path.Combine(appDirPath, "Cache");
-            using var httpClient = new HttpClient();
-            var downloader = new ModelDownloader(httpClient, cacheDirectoryPath);
+            Directory.CreateDirectory(cacheDirectoryPath);
+            using var downloader = new ModelDownloader();
             var modelPaths = new List<string>();
             foreach (string? model in models)
             {
@@ -165,11 +166,12 @@ namespace NeMoOnnxSharp.Example
                 {
                     throw new InvalidDataException();
                 }
-                var bundle = PretrainedModelInfo.GetInfo(model);
+                var info = PretrainedModelInfo.GetInfo(model);
+                string fileName = GetFileNameFromUrl(info.Location);
+                string filePath = Path.Combine(cacheDirectoryPath, fileName);
                 Console.WriteLine("Model: {0}", model);
-                string fileName = GetFileNameFromUrl(bundle.Location);
-                string modelPath = await downloader.MayDownloadAsync(fileName, bundle.Location, bundle.Hash);
-                modelPaths.Add(modelPath);
+                string modelPath = await downloader.MayDownloadAsync(filePath, info.Location, info.Hash);
+                modelPaths.Add(filePath);
             }
             return modelPaths.ToArray();
         }
@@ -236,7 +238,8 @@ namespace NeMoOnnxSharp.Example
                     while (buffer.OutputCount >= vadWinLength)
                     {
                         var x = buffer.OutputBuffer.AsSpan(0, vadWinLength);
-                        double score = vad.PredictStep(x);
+                        var logits = vad.Predict(x);
+                        double score = 1.0 / (1.0 + Math.Exp(logits[0] - logits[1]));
                         scoreSum += score - scores[scoresIndex];
                         scores[scoresIndex] = score;
                         scoresIndex++;

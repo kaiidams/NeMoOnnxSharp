@@ -62,29 +62,27 @@ namespace NeMoOnnxSharp
             container.Add(NamedOnnxValue.CreateFromTensor("audio_signal", audioSignalData));
             using (var res = _inferSess.Run(container, new string[] { "logprobs" }))
             {
-                foreach (var score in res)
-                {
-                    long[] preds = ArgMax(score.AsTensor<float>());
-                    text = _tokenizer.Decode(preds);
-                    text = _tokenizer.MergeRepeated(text);
-                }
+                var logprobs = res.First();
+                long[] preds = ArgMax(logprobs.AsTensor<float>());
+                text = _tokenizer.Decode(preds);
+                text = _tokenizer.MergeRepeated(text);
             }
             return text;
         }
 
-        private long[] ArgMax(Tensor<float> score)
+        private long[] ArgMax(Tensor<float> logprobs)
         {
-            long[] preds = new long[score.Dimensions[1]];
+            long[] preds = new long[logprobs.Dimensions[1]];
             for (int l = 0; l < preds.Length; l++)
             {
                 int k = -1;
-                float m = -10000.0f;
-                for (int j = 0; j < score.Dimensions[2]; j++)
+                float m = float.MinValue;
+                for (int j = 0; j < logprobs.Dimensions[2]; j++)
                 {
-                    if (m < score[0, l, j])
+                    if (m < logprobs[0, l, j])
                     {
                         k = j;
-                        m = score[0, l, j];
+                        m = logprobs[0, l, j];
                     }
                 }
                 preds[l] = k;

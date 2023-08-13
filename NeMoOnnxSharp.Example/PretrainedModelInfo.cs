@@ -5,7 +5,7 @@ using System;
 
 namespace NeMoOnnxSharp.Example
 {
-    public class PretrainedModelInfo
+    internal class PretrainedModelInfo
     {
         public static PretrainedModelInfo GetInfo(string pretrainedModelName) 
         {

@@ -12,15 +12,18 @@ using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp.Example
 {
-    public class ModelDownloader
+    internal class ModelDownloader : IDisposable
     {
-        private HttpClient _httpClient;
-        private string _cacheDirectoryPath;
+        private readonly HttpClient _httpClient;
 
-        public ModelDownloader(HttpClient httpClient, string cacheDirectoryPath)
+        public ModelDownloader()
         {
-            _httpClient = httpClient;
-            _cacheDirectoryPath = cacheDirectoryPath;
+            _httpClient = new HttpClient();
+        }
+
+        public void Dispose()
+        {
+            _httpClient.Dispose();
         }
 
         private string GetFileChecksum(string path)
@@ -62,28 +65,29 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
-        public async Task<string> MayDownloadAsync(string fileName, string url, string sha256, CancellationToken cancellationToken = default)
+        public async Task<string> MayDownloadAsync(
+            string filePath, string url, string sha256,
+            CancellationToken cancellationToken = default)
         {
-            Directory.CreateDirectory(_cacheDirectoryPath);
-
-            string cacheFilePath = Path.Combine(_cacheDirectoryPath, fileName);
-            if (CheckCacheFile(cacheFilePath, sha256))
+            if (CheckCacheFile(filePath, sha256))
             {
-                Console.WriteLine("Using cached `{0}'.", fileName);
+                Console.WriteLine("Using cached `{0}'.", url);
             }
             else
             {
-                await DownloadAsync(url, cacheFilePath);
-                if (!CheckCacheFile(cacheFilePath, sha256))
+                await DownloadAsync(url, filePath);
+                if (!CheckCacheFile(filePath, sha256))
                 {
-                    File.Delete(cacheFilePath);
+                    File.Delete(filePath);
                     throw new InvalidDataException();
                 }
             }
-            return cacheFilePath;
+            return filePath;
         }
 
-        private async Task DownloadAsync(string url, string path, CancellationToken cancellationToken = default)
+        private async Task DownloadAsync(
+            string url, string path,
+            CancellationToken cancellationToken = default)
         {
             using (var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
             {
