@@ -1,281 +1,294 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿// Copyright (c) Katsuya Iida.  All Rights Reserved.
+// See LICENSE in the project root for license information.
+
+using System;
 
 namespace NeMoOnnxSharp
 {
-    internal class AudioToMelSpectrogramPreprocessor
+    public class AudioToMelSpectrogramPreprocessor : IAudioPreprocessor<short, float>
     {
-        private const double InvShortMaxValue = 1.0 / short.MaxValue;
-
-        private static double[] MakeHannWindow(int windowLength)
+        private enum FrameType
         {
-            double[] window = new double[windowLength];
-            for (int i = 0; i < windowLength; i++)
-            {
-                window[i] = 0.5 * (1 - Math.Cos(2 * Math.PI * i / (windowLength - 1)));
-            }
-            return window;
+            None,
+            Preemph,
+            Center,
+            CenterPreemph
         }
 
-        private readonly int _winLength;
-        private readonly int _hopWidth;
-        private readonly double[] _window;
-        private readonly double[] _melBands;
-        private readonly double[] _temp1;
-        private readonly double[] _temp2;
-        private readonly int _fftLength;
-        private readonly int _nMelBands;
-        private readonly double _sampleRate;
-        private readonly double _logOffset;
-        private readonly double _stdOffset;
-        private readonly double _preemph;
+        private const double FeatureStdOffset = 1e-5;
+
+        private static FrameType GetFrameType(bool center, double preemph)
+        {
+            if (preemph == 0.0)
+            {
+                return center ? FrameType.Center : FrameType.None;
+            }
+            else
+            {
+                return center ? FrameType.CenterPreemph : FrameType.Preemph;
+            }
+        }
+
+        protected readonly int _sampleRate;
+        protected readonly double[] _window;
+        private readonly FrameType _frameType;
+        protected readonly int _nWindowStride;
+        protected readonly FeatureNormalize _normalize;
+        private readonly double _preNormalize;
+        protected readonly double _preemph;
+        protected readonly double[] _melBands;
+        protected readonly int _nFFT;
+        protected readonly int _features;
+        private readonly MelNorm _melNorm;
+        private readonly int _magPower;
+        private readonly double _logZeroGuardValue;
+        private readonly bool _log;
 
         public AudioToMelSpectrogramPreprocessor(
             int sampleRate = 16000,
             double windowSize = 0.02,
             double windowStride = 0.01,
-            int stftLength = 512,
-            int nMelBands = 64, double melMinHz = 0.0, double melMaxHz = 0.0,
-            double preemph = 0.97)
+            int? nWindowSize = null,
+            int? nWindowStride = null,
+            WindowFunction window = WindowFunction.Hann,
+            FeatureNormalize normalize = FeatureNormalize.PerFeature,
+            double preNormalize = 0.0,
+            int? nFFT = null,
+            double preemph = 0.97,
+            bool center = true,
+            int features = 64,
+            double lowFreq = 0.0,
+            double? highFreq = null,
+            bool htk = false,
+            MelNorm melNorm = MelNorm.Slaney,
+            bool log = true,
+            double? logZeroGuardValue = null,
+            int magPower = 2)
         {
-            if (melMaxHz == 0.0)
-            {
-                melMaxHz = sampleRate / 2;
-            }
             _sampleRate = sampleRate;
-            _winLength = (int)(sampleRate * windowSize); // 320
-            _hopWidth = (int)(sampleRate * windowStride); // 160
-            _window = MakeHannWindow(_winLength);
-            _melBands = MakeMelBands(melMinHz, melMaxHz, nMelBands);
-            _temp1 = new double[stftLength];
-            _temp2 = new double[stftLength];
-            _fftLength = stftLength;
-            _nMelBands = nMelBands;
+            _preNormalize = preNormalize;
             _preemph = preemph;
-            _logOffset = Math.Pow(2, -24);
-            _stdOffset = 1e-5;
-        }
-
-        public float[] Process(short[] waveform)
-        {
-            int audioSignalLength = waveform.Length / _hopWidth + 1;
-            float[] audioSignal = new float[_nMelBands * audioSignalLength]; 
-            for (int i = 0; i < audioSignalLength; i++)
+            _window = Window.MakeWindow(window, nWindowSize ?? (int)(windowSize * sampleRate));
+            _frameType = GetFrameType(center, preemph);
+            _nWindowStride = nWindowStride ?? (int)(windowStride * sampleRate);
+            _normalize = normalize;
+            if (normalize != FeatureNormalize.PerFeature)
             {
-                MelSpectrogram(
-                    waveform, _hopWidth * i, 
-                    audioSignal, i, audioSignalLength);
+                throw new ArgumentException("Only FeatureNormalize.PerFeature is supported");
             }
-            Normalize(audioSignal, audioSignalLength);
-            return audioSignal;
+            _melBands = MelBands.MakeMelBands(
+                lowFreq, highFreq ?? sampleRate / 2,
+                features,
+                htk ? MelScale.HTK : MelScale.Slaney);
+            _melNorm = melNorm;
+            _nFFT = nFFT ?? (int)Math.Pow(2, Math.Ceiling(Math.Log(_window.Length, 2)));
+            _features = features;
+            _magPower = magPower;
+            _log = log;
+            _logZeroGuardValue = logZeroGuardValue ?? Math.Pow(2, -24);
         }
 
-        private void MelSpectrogram(
-            short[] waveform, int waveformPos, 
-            float[] melspec, int melspecOffset, int melspecStride)
+        public float[] GetFeatures(Span<short> input)
         {
-            GetFrame(waveform, waveformPos, InvShortMaxValue, _temp1);
-            CFFT(_temp1, _temp2, _fftLength);
-            ToSquareMagnitude(_temp2, _temp1, _fftLength);
-            ToMelSpec(_temp2, melspec, melspecOffset, melspecStride);
-        }
-
-        private void ToMelSpec(
-            double[] spec,
-            float[] melspec, int melspecOffset, int melspecStride)
-        {
-            for (int i = 0; i < _nMelBands; i++)
+            double scale = GetScaleFactor(input);
+            int outputStep = _features;
+            int outputLength = GetOutputLength(input);
+            float[] output = new float[outputStep * outputLength];
+            int waveformOffset = 0;
+            for (int outputOffset = 0; outputOffset < output.Length; outputOffset += outputStep)
             {
-                double startHz = _melBands[i];
-                double peakHz = _melBands[i + 1];
-                double endHz = _melBands[i + 2];
-                double v = 0.0;
-                int j = (int)(startHz * _fftLength / _sampleRate) + 1;
-                while (true)
-                {
-                    double hz = j * _sampleRate / _fftLength;
-                    if (hz > peakHz)
-                        break;
-                    double r = (hz - startHz) / (peakHz - startHz);
-                    v += spec[j] * r * 2 / (endHz - startHz);
-                    j++;
-                }
-                while (true)
-                {
-                    double hz = j * _sampleRate / _fftLength;
-                    if (hz > endHz)
-                        break;
-                    double r = (endHz - hz) / (endHz - peakHz);
-                    v += spec[j] * r * 2 / (endHz - startHz);
-                    j++;
-                }
-                melspec[melspecOffset + melspecStride * i] = (float)Math.Log(v + _logOffset);
+                MelSpectrogramStep(input, waveformOffset, scale, output.AsSpan(outputOffset));
+                waveformOffset += _nWindowStride;
+            }
+            if (_normalize != FeatureNormalize.None)
+            {
+                NormalizeBatch(output, outputStep);
+            }
+            return output;
+        }
+
+        private int GetOutputLength(Span<short> input)
+        {
+            if (_frameType == FrameType.Center || _frameType == FrameType.CenterPreemph)
+            {
+                return (input.Length + _nWindowStride - 1) / _nWindowStride;
+            }
+            else
+            {
+                return (input.Length - _window.Length) / _nWindowStride + 1;
             }
         }
 
-        private void Normalize(float[] melspec, int melspecStride)
+        private double GetScaleFactor(Span<short> input)
         {
-            for (int i = 0; i < _nMelBands; i++)
+            double scale;
+            if (_preNormalize > 0)
+            {
+                scale = _preNormalize / MaxAbsValue(input);
+            }
+            else
+            {
+                scale = 1.0 / short.MaxValue;
+            }
+
+            return scale;
+        }
+
+        private int MaxAbsValue(Span<short> input)
+        {
+            int maxValue = 1;
+            for (int i = 0; i < input.Length; i++)
+            {
+                int value = input[i];
+                if (value < 0) value = -value;
+                if (maxValue < value) maxValue = value;
+            }
+            return maxValue;
+        }
+
+        public void MelSpectrogramStep(
+            Span<short> input, int waveformOffset,
+            double scale, Span<float> output)
+        {
+            Span<double> temp1 = stackalloc double[_nFFT];
+            Span<double> temp2 = stackalloc double[_nFFT];
+            ReadFrame(input, waveformOffset, scale, temp1);
+            FFT.CFFT(temp1, temp2, _nFFT);
+            ToMagnitude(temp2, temp1, _nFFT);
+            MelBands.ToMelSpectrogram(
+                temp2, _melBands, _sampleRate, _nFFT, _features, _melNorm, _log, _logZeroGuardValue, temp1);
+            for (int i = 0; i < _features; i++) output[i] = (float)temp1[i];
+        }
+
+        protected void ReadFrame(Span<short> input, int offset, double scale, Span<double> frame)
+        {
+            switch (_frameType)
+            {
+                case FrameType.None:
+                    ReadFrameNone(input, offset, scale, frame);
+                    break;
+                case FrameType.Preemph:
+                    throw new NotImplementedException();
+                case FrameType.Center:
+                    ReadFrameCenter(input, offset, scale, frame);
+                    break;
+                case FrameType.CenterPreemph:
+                    ReadFrameCenterPreemphasis(input, offset, scale, frame);
+                    break;
+            }
+        }
+
+        private void ReadFrameNone(Span<short> input, int offset, double scale, Span<double> frame)
+        {
+            for (int i = 0; i < _window.Length; i++)
+            {
+                frame[i] = input[offset + i] * _window[i] * scale;
+            }
+            for (int i = _window.Length; i < frame.Length; i++)
+            {
+                frame[i] = 0.0;
+            }
+        }
+
+        private void ReadFrameCenter(Span<short> input, int offset, double scale, Span<double> frame)
+        {
+            int frameOffset = frame.Length / 2 - _window.Length / 2;
+            for (int i = 0; i < frameOffset; i++)
+            {
+                frame[i] = 0;
+            }
+            int waveformOffset = offset - _window.Length / 2;
+            for (int i = 0; i < _window.Length; i++)
+            {
+                int k = i + waveformOffset;
+                double v = (k >= 0 && k < input.Length) ? input[k] : 0;
+                frame[i + frameOffset] = scale * v * _window[i];
+            }
+            for (int i = frameOffset + _window.Length; i < frame.Length; i++)
+            {
+                frame[i] = 0;
+            }
+        }
+
+        private void ReadFrameCenterPreemphasis(Span<short> input, int offset, double scale, Span<double> frame)
+        {
+            int frameOffset = (frame.Length - 1) / 2 - (_window.Length - 1) / 2;
+            for (int i = 0; i < frameOffset; i++)
+            {
+                frame[i] = 0;
+            }
+            int waveformOffset = offset - (_window.Length - 1) / 2;
+            for (int i = 0; i < _window.Length; i++)
+            {
+                int k = i + waveformOffset;
+                double v = (k >= 0 && k < input.Length) ? input[k] : 0;
+                k--;
+                if (k >= 0 && k < input.Length) v -= _preemph * input[k];
+                frame[i + frameOffset] = scale * v * _window[i];
+            }
+            for (int i = frameOffset + _window.Length; i < frame.Length; i++)
+            {
+                frame[i] = 0;
+            }
+        }
+
+        private void ToMagnitude(Span<double> xr, Span<double> xi, int length)
+        {
+            if (_magPower == 2)
+            {
+                ToSquareMagnitude(xr, xi, length);
+            }
+            else if (_magPower == 1)
+            {
+                ToAbsoluteMagnitude(xr, xi, length);
+            }
+            else
+            {
+                throw new NotImplementedException("power must be 1 or 2.");
+            }
+        }
+
+        private static void ToAbsoluteMagnitude(Span<double> xr, Span<double> xi, int length)
+        {
+            for (int i = 0; i < length; i++)
+            {
+                xr[i] = Math.Sqrt(xr[i] * xr[i] + xi[i] * xi[i]);
+            }
+        }
+
+        private static void ToSquareMagnitude(Span<double> xr, Span<double> xi, int length)
+        {
+            for (int i = 0; i < length; i++)
+            {
+                xr[i] = xr[i] * xr[i] + xi[i] * xi[i];
+            }
+        }
+
+        private void NormalizeBatch(float[] output, int outputStep)
+        {
+            int melspecLength = output.Length / outputStep;
+            for (int i = 0; i < outputStep; i++)
             {
                 double sum = 0;
-                for (int j = 0; j < melspecStride; j++)
+                for (int j = 0; j < melspecLength; j++)
                 {
-                    double v = melspec[melspecStride * i + j];
+                    double v = output[i + outputStep * j];
                     sum += v;
                 }
-                float mean = (float)(sum / melspecStride);
+                float mean = (float)(sum / melspecLength);
                 sum = 0;
-                for (int j = 0; j < melspecStride; j++)
+                for (int j = 0; j < melspecLength; j++)
                 {
-                    double v = melspec[melspecStride * i + j] - mean;
+                    double v = output[i + outputStep * j] - mean;
                     sum += v * v;
                 }
-                double std = Math.Sqrt(sum / melspecStride);
-                float invStd = (float)(1.0 / (_stdOffset + std));
+                double std = Math.Sqrt(sum / melspecLength);
+                float invStd = (float)(1.0 / (FeatureStdOffset + std));
 
-                for (int j = 0; j < melspecStride; j++)
+                for (int j = 0; j < melspecLength; j++)
                 {
-                    float v = melspec[melspecStride * i + j];
-                    melspec[melspecStride * i + j] = (v - mean) * invStd;
-                }
-            }
-        }
-
-        private void GetFrame(short[] waveform, int waveformPos, double scale, double[] frame)
-        {
-            int winOffset = (_winLength - _fftLength) / 2;
-            int waveformOffset = waveformPos - _fftLength / 2;
-            for (int i = 0; i < _fftLength; i++)
-            {
-                int j = i + winOffset;
-                if (j >= 0 && j < _winLength)
-                {
-                    int k = i + waveformOffset;
-                    double v = (k >= 0 && k < waveform.Length) ? waveform[k] : 0;
-                    k--;
-                    if (k >= 0 && k < waveform.Length) v -= _preemph * waveform[k];
-                    frame[i] = scale * v * _window[j];
-                }
-                else
-                {
-                    frame[i] = 0;
-                }
-            }
-        }
-
-        static void ToSquareMagnitude(double[] xr, double[] xi, int N)
-        {
-            for (int n = 0; n < N; n++)
-            {
-                xr[n] = xr[n] * xr[n] + xi[n] * xi[n];
-            }
-        }
-
-        static double HzToMel(double hz)
-        {
-            const double minLogHz = 1000.0;  // beginning of log region in Hz
-            const double linearMelHz = 200.0 / 3;
-            double mel;
-            if (hz >= minLogHz)
-            {
-                // Log region
-                const double minLogMel = minLogHz / linearMelHz;
-                double logStep = Math.Log(6.4) / 27.0;
-                mel = minLogMel + Math.Log(hz / minLogHz) / logStep;
-            }
-            else
-            {
-                // Linear region
-                mel = hz / linearMelHz;
-            }
-
-            return mel;
-        }
-
-        static double MelToHz(double mel)
-        {
-            const double minLogHz = 1000.0;  // beginning of log region in Hz
-            const double linearMelHz = 200.0 / 3;
-            const double minLogMel = minLogHz / linearMelHz;  // same (Mels)
-            double freq;
-
-
-            if (mel >= minLogMel)
-            {
-                // Log region
-                double logStep = Math.Log(6.4) / 27.0;
-                freq = minLogHz * Math.Exp(logStep * (mel - minLogMel));
-            }
-            else
-            {
-                // Linear region
-                freq = linearMelHz * mel;
-            }
-
-            return freq;
-        }
-
-        static double[] MakeMelBands(double melMinHz, double melMaxHz, int nMelBanks)
-        {
-            double melMin = HzToMel(melMinHz);
-            double melMax = HzToMel(melMaxHz);
-            double[] melBanks = new double[nMelBanks + 2];
-            for (int i = 0; i < nMelBanks + 2; i++)
-            {
-                double mel = (melMax - melMin) * i / (nMelBanks + 1) + melMin;
-                melBanks[i] = MelToHz(mel);
-            }
-            return melBanks;
-        }
-
-        static int SwapIndex(int i)
-        {
-            return (i >> 8) & 0x01
-                 | (i >> 6) & 0x02
-                 | (i >> 4) & 0x04
-                 | (i >> 2) & 0x08
-                 | (i) & 0x10
-                 | (i << 2) & 0x20
-                 | (i << 4) & 0x40
-                 | (i << 6) & 0x80
-                 | (i << 8) & 0x100;
-        }
-
-        public static void CFFT(double[] xr, double[] xi, int N)
-        {
-            double[] t = xi;
-            xi = xr;
-            xr = t;
-            for (int i = 0; i < N; i++)
-            {
-                xr[i] = xi[SwapIndex(i)];
-            }
-            for (int i = 0; i < N; i++)
-            {
-                xi[i] = 0.0;
-            }
-            for (int n = 1; n < N; n *= 2)
-            {
-                for (int j = 0; j < N; j += n * 2)
-                {
-                    for (int k = 0; k < n; k++)
-                    {
-                        double ar = Math.Cos(-Math.PI * k / n);
-                        double ai = Math.Sin(-Math.PI * k / n);
-                        double er = xr[j + k];
-                        double ei = xi[j + k];
-                        double or = xr[j + k + n];
-                        double oi = xi[j + k + n];
-                        double aor = ar * or - ai * oi;
-                        double aoi = ai * or + ar * oi;
-                        xr[j + k] = er + aor;
-                        xi[j + k] = ei + aoi;
-                        xr[j + k + n] = er - aor;
-                        xi[j + k + n] = ei - aoi;
-                    }
+                    float v = output[i + outputStep * j];
+                    output[i + outputStep * j] = (v - mean) * invStd;
                 }
             }
         }
