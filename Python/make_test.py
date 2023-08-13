@@ -1,3 +1,6 @@
+# Copyright (c) Katsuya Iida.  All Rights Reserved.
+# See LICENSE in the project root for license information.
+
 import librosa
 import torch
 from nemo.collections.asr.modules import (
@@ -7,7 +10,7 @@ from nemo.collections.asr.modules import (
 
 
 def main():
-    wavpath = "61-70968-0000.wav"
+    wavpath = "../NemoOnnxSharp.Tests/Data/61-70968-0000.wav"
     sr = 16000
     audio_signal, sr = librosa.load(wavpath, sr=sr, mono=True)
     assert audio_signal.ndim == 1
@@ -35,7 +38,7 @@ def convert_mel_spectrogram(audio_signal, length):
         processed_signal, processed_signal_length = preprocessor(input_signal=audio_signal, length=length)
     print(processed_signal, processed_signal_length)
     print(processed_signal.shape, processed_signal_length)
-    with open('mel_spectrogram.bin', 'wb') as fp:
+    with open("../NemoOnnxSharp.Tests/Data/mel_spectrogram.bin", 'wb') as fp:
         fp.write(processed_signal[0].T.numpy().tobytes("C"))
 
 
@@ -52,7 +55,7 @@ def convert_mfcc(audio_signal, length):
         processed_signal, processed_signal_length = preprocessor(input_signal=audio_signal, length=length)
     print(processed_signal, processed_signal_length)
     print(processed_signal.shape, processed_signal_length)
-    with open('mfcc.bin', 'wb') as fp:
+    with open("../NemoOnnxSharp.Tests/Data/mfcc.bin", 'wb') as fp:
         fp.write(processed_signal[0].T.numpy().tobytes("C"))
 
 
