@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -55,19 +56,83 @@ namespace NeMoOnnxSharp.Example
                 string modelPath = await DownloadModelAsync(settings.CommandModel);
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
-                using var model = new EncDecClassificationModel(modelPath, speechCommands: true);
+                using var model = new EncDecClassificationModel(modelPath, mbn: true);
                 var audioSignal = WaveFile.ReadWAV(waveFile, 16000).AsSpan(0, 8000).ToArray();
                 string predictText = model.Transcribe(audioSignal);
                 Console.WriteLine("expected: yes, predicted: {0}", predictText);
             }
+            else if (settings.Task == "framevad")
+            {
+                string[] modelsPath = await DownloadModelsAsync(new[]
+                {
+                    settings.VADModel, settings.CommandModel
+                });
+                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
+                string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
+                using var model = new EncDecClassificationModel(modelsPath[0]);
+                var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
+                double step = 0.10;
+                double windowSize = 0.15;  // input segment length for NN we used for training
+                int sampleRate = 16000;
+                double frameLength = step;
+                int pad = (int)((windowSize - step) * sampleRate);
+                int chunkSize = (int)(frameLength * sampleRate);
+                int nWindowSize = (int)(windowSize * sampleRate);
+                var buffer = new short[audioSignal.Length + 2 * pad];
+                audioSignal.CopyTo(buffer.AsSpan(pad));
+                for (int offset = 0; offset + nWindowSize <= buffer.Length; offset += chunkSize)
+                {
+                    string vadText = model.Transcribe(buffer.AsSpan(offset, nWindowSize));
+                    double t = step - windowSize / 2 + (double)offset / sampleRate;
+                    Console.WriteLine("time: {0:0.000}, vad: {1}", t, vadText);
+                }
+            }
             else if (settings.Task == "frame")
+            {
+                string[] modelsPath = await DownloadModelsAsync(new[]
+                {
+                    settings.VADModel, settings.CommandModel
+                });
+                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
+                string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
+                using var vad = new EncDecClassificationModel(modelsPath[0]);
+                using var mbn = new EncDecClassificationModel(modelsPath[1], mbn: true);
+                var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
+                double step = 0.25;
+                double windowSize = 1.28;  // input segment length for NN we used for training
+                int sampleRate = 16000;
+                double frameLength = step;
+                int pad = (int)((windowSize - step) * sampleRate);
+                int chunkSize = (int)(frameLength * sampleRate);
+                int nWindowSize = (int)(windowSize * sampleRate);
+                var buffer = new short[audioSignal.Length + 2 * pad];
+                audioSignal.CopyTo(buffer.AsSpan(pad));
+                for (int offset = 0; offset + nWindowSize <= buffer.Length; offset += chunkSize)
+                {
+                    string vadText = vad.Transcribe(buffer.AsSpan(offset, nWindowSize));
+                    string mbnText = mbn.Transcribe(buffer.AsSpan(offset, nWindowSize));
+                    double t = step - windowSize / 2 + (double)offset / sampleRate;
+                    Console.WriteLine("time: {0:0.000}, vad: {1}, mbn: {2}", t, vadText, mbnText);
+                }
+            }
+            else if (settings.Task == "frame2")
             {
                 string modelPath = await DownloadModelAsync(settings.CommandModel);
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
-                using var model = new EncDecClassificationModel(modelPath, speechCommands: true);
+                using var model = new EncDecClassificationModel(modelPath, mbn: true);
                 var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
-                string predictText = model.Transcribe(audioSignal);
+                double step = 0.25;
+                double windowSize = 1.28;  // input segment length for NN we used for training
+                double frameLength = step;
+                int sampleRate = 16000;
+                int chunkSize = (int)(frameLength * sampleRate);
+                int nFrameLength = (int)(frameLength * sampleRate);
+                double frameOverlap = (windowSize - frameLength) / 2;
+                int nFrameOverlap = (int)(frameOverlap * sampleRate);
+                var buffer = new short[2 * nFrameOverlap + nFrameLength];
+                audioSignal.AsSpan(0, buffer.Length).CopyTo(buffer);
+                string predictText = model.Transcribe(buffer);
                 Console.WriteLine("predicted: {0}", predictText);
             }
             else if (settings.Task == "socketaudio")

@@ -51,8 +51,8 @@ namespace NeMoOnnxSharp
             _inferSess = inferSess;
         }
 
-        public EncDecClassificationModel(string modelPath, bool speechCommands = false)
-            : this(new InferenceSession(modelPath), speechCommands)
+        public EncDecClassificationModel(string modelPath, bool mbn = false)
+            : this(new InferenceSession(modelPath), mbn)
         {
         }
 
@@ -66,7 +66,7 @@ namespace NeMoOnnxSharp
             _inferSess.Dispose();
         }
 
-        public override string Transcribe(short[] inputSignal)
+        public override string Transcribe(Span<short> inputSignal)
         {
             string text = string.Empty;
             var processedSignal = _processor.GetFeatures(inputSignal);

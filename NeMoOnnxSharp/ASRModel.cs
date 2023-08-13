@@ -10,7 +10,7 @@ namespace NeMoOnnxSharp
 {
     public abstract class ASRModel
     {
-        public abstract string Transcribe(short[] inputSignal);
+        public abstract string Transcribe(Span<short> inputSignal);
 
         protected float[] TransposeInputSignal(Span<float> inputSignal, int nFeatures)
         {

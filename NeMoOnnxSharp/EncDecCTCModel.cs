@@ -52,7 +52,7 @@ namespace NeMoOnnxSharp
             _inferSess.Dispose();
         }
 
-        public override string Transcribe(short[] inputSignal)
+        public override string Transcribe(Span<short> inputSignal)
         {
             string text = string.Empty;
             var processedSignal = _processor.GetFeatures(inputSignal);
