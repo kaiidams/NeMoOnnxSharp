@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp
 {
-    public class SpeechRecognizer : ISpeechRecognizer
+    public class EncDecCTCModel : ASRModel, IDisposable
     {
         private const string Vocabulary = " abcdefghijklmnopqrstuvwxyz'_";
 
@@ -21,7 +21,7 @@ namespace NeMoOnnxSharp
         private readonly InferenceSession _inferSess;
         private readonly int _features;
 
-        private SpeechRecognizer(InferenceSession inferSess)
+        private EncDecCTCModel(InferenceSession inferSess)
         {
             _features = 64;
             _processor = new AudioToMelSpectrogramPreprocessor(
@@ -35,11 +35,13 @@ namespace NeMoOnnxSharp
             _inferSess = inferSess;
         }
 
-        public SpeechRecognizer(string modelPath) : this(new InferenceSession(modelPath))
+        public EncDecCTCModel(string modelPath)
+            : this(new InferenceSession(modelPath))
         {
         }
 
-        public SpeechRecognizer(byte[] model) : this(new InferenceSession(model))
+        public EncDecCTCModel(byte[] model)
+            : this(new InferenceSession(model))
         {
         }
 
@@ -48,15 +50,15 @@ namespace NeMoOnnxSharp
             _inferSess.Dispose();
         }
 
-        public string Recognize(short[] waveform)
+        public override string Transcribe(short[] inputSignal)
         {
             string text = string.Empty;
-            var audioSignal = _processor.GetFeatures(waveform);
-            audioSignal = Transpose(audioSignal, _features);
+            var processedSignal = _processor.GetFeatures(inputSignal);
+            processedSignal = TransposeInputSignal(processedSignal, _features);
             var container = new List<NamedOnnxValue>();
             var audioSignalData = new DenseTensor<float>(
-                audioSignal,
-                new int[3] { 1, _features, audioSignal.Length / _features });
+                processedSignal,
+                new int[3] { 1, _features, processedSignal.Length / _features });
             container.Add(NamedOnnxValue.CreateFromTensor("audio_signal", audioSignalData));
             using (var res = _inferSess.Run(container, new string[] { "logprobs" }))
             {
@@ -68,20 +70,6 @@ namespace NeMoOnnxSharp
                 }
             }
             return text;
-        }
-
-        private float[] Transpose(float[] x, int cols)
-        {
-            var y = new float[x.Length];
-            int rows = x.Length / cols;
-            for (int i = 0; i < rows; i++)
-            {
-                for (int j = 0; j < cols; j++)
-                {
-                    y[j * rows + i] = x[i * cols + j];  
-                }
-            }
-            return y;
         }
 
         private long[] ArgMax(Tensor<float> score)

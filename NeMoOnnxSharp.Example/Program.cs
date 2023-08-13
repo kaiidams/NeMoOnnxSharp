@@ -33,11 +33,11 @@ namespace NeMoOnnxSharp.Example
 
             if (settings.Task == "transcribe")
             {
-                string modelPath = await DownloadModelAsync(settings.AsrModel);
+                string modelPath = await DownloadModelAsync(settings.ASRModel);
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
-                using var recognizer = new SpeechRecognizer(modelPath);
+                using var model = new EncDecCTCModel(modelPath);
                 using var reader = File.OpenText(inputPath);
                 string? line;
                 while ((line = reader.ReadLine()) != null)
@@ -46,14 +46,23 @@ namespace NeMoOnnxSharp.Example
                     string name = parts[0];
                     string targetText = parts[1];
                     string waveFile = Path.Combine(inputDirPath, name);
-                    var waveform = WaveFile.ReadWAV(waveFile, 16000);
-                    string predictText = recognizer.Recognize(waveform);
+                    var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
+                    string predictText = model.Transcribe(audioSignal);
                     Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
                 }
             }
+            else if (settings.Task == "classify")
+            {
+                string modelPath = await DownloadModelAsync(settings.CommandModel);
+                string waveFile = @"C:\Users\kaiida\Downloads\speech_commands_stop.wav";
+                using var model = new EncDecClassificationModel(modelPath, speechCommands: true);
+                var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
+                string predictText = model.Transcribe(audioSignal);
+                Console.WriteLine("predicted: {0}", predictText);
+            }
             else if (settings.Task == "socketaudio")
             {
-                string modelPath = await DownloadModelAsync(settings.VadModel);
+                string modelPath = await DownloadModelAsync(settings.VADModel);
                 RunSocketAudio(modelPath);
                 return;
             }
@@ -61,14 +70,14 @@ namespace NeMoOnnxSharp.Example
             {
                 var modelPaths = await DownloadModelsAsync(new string?[]
                 {
-                    settings.VadModel, settings.AsrModel
+                    settings.VADModel, settings.ASRModel
                 });
                 RunFileStreamAudio(basePath, modelPaths);
                 return;
             }
             else if (settings.Task == "vad")
             {
-                string modelPath = await DownloadModelAsync(settings.VadModel);
+                string modelPath = await DownloadModelAsync(settings.VADModel);
                 string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
                 string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
@@ -81,7 +90,7 @@ namespace NeMoOnnxSharp.Example
                     //preNormalize: 0.8,
                     nMels: 64,
                     nMFCC: 64);
-                using var vad = new FrameVAD(modelPath);
+                using var vad = new EncDecClassificationModel(modelPath);
                 using var reader = File.OpenText(inputPath);
                 string? line;
                 while ((line = reader.ReadLine()) != null)
@@ -108,7 +117,7 @@ namespace NeMoOnnxSharp.Example
 
         private static void RunSocketAudio(string modelPath)
         {
-            using var vad = new FrameVAD(modelPath);
+            using var vad = new EncDecClassificationModel(modelPath);
             using Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
             socket.Connect("127.0.0.1", 17843);
             Console.WriteLine("Connected");
@@ -184,8 +193,8 @@ namespace NeMoOnnxSharp.Example
             var buffer = new AudioFeatureBuffer<short, float>(
                 transform,
                 hopLength: 160);
-            using var recognizer = new SpeechRecognizer(modelPaths[1]);
-            using var vad = new FrameVAD(modelPaths[0]);
+            using var recognizer = new EncDecCTCModel(modelPaths[1]);
+            using var vad = new EncDecClassificationModel(modelPaths[0]);
             byte[] responseBytes = new byte[1024];
             int count = 0;
             int vadWinLength = (int)(sampleRate * 0.31 / buffer.HopLength * buffer.NumOutputChannels);
@@ -262,7 +271,7 @@ namespace NeMoOnnxSharp.Example
                                     recordedAudio.ToArray(),
                                     16000);
                                 recordedIndex++;
-                                string text = recognizer.Recognize(recordedAudio.ToArray());
+                                string text = recognizer.Transcribe(recordedAudio.ToArray());
                                 Console.WriteLine();
                                 Console.WriteLine("text: {0}", text);
                                 //recordedAudio.Clear();

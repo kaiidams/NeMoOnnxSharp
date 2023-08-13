@@ -5,8 +5,9 @@ namespace NeMoOnnxSharp.Example
 {
     internal class Settings
     {
-        public string? AsrModel { get; set; }
-        public string? VadModel { get; set; }
+        public string? ASRModel { get; set; }
+        public string? VADModel { get; set; }
+        public string? CommandModel { get; set; }
         public string? Task { get; set; }
     }
 }
