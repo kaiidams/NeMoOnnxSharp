@@ -27,6 +27,10 @@ namespace NeMoOnnxSharp.Example
             {
                 await FramePredict(true);
             }
+            else
+            {
+                throw new InvalidDataException(task);
+            }
         }
 
         static async Task Transcribe()
