@@ -53,7 +53,18 @@ namespace NeMoOnnxSharp.Example
             else if (settings.Task == "classify")
             {
                 string modelPath = await DownloadModelAsync(settings.CommandModel);
-                string waveFile = @"C:\Users\kaiida\Downloads\speech_commands_stop.wav";
+                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
+                string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
+                using var model = new EncDecClassificationModel(modelPath, speechCommands: true);
+                var audioSignal = WaveFile.ReadWAV(waveFile, 16000).AsSpan(0, 8000).ToArray();
+                string predictText = model.Transcribe(audioSignal);
+                Console.WriteLine("expected: yes, predicted: {0}", predictText);
+            }
+            else if (settings.Task == "frame")
+            {
+                string modelPath = await DownloadModelAsync(settings.CommandModel);
+                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
+                string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
                 using var model = new EncDecClassificationModel(modelPath, speechCommands: true);
                 var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
                 string predictText = model.Transcribe(audioSignal);
