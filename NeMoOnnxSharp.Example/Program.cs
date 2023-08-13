@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Katsuya Iida.  All Rights Reserved.
 // See LICENSE in the project root for license information.
 
-using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
 using System.Text;
@@ -10,7 +9,6 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -20,163 +18,85 @@ namespace NeMoOnnxSharp.Example
 
         static async Task Main(string[] args)
         {
-            IConfiguration config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
-                .AddEnvironmentVariables()
-                .Build();
-            var settings = config.GetRequiredSection("Settings").Get<Settings>();
-            if (settings == null)
-            {
-                throw new InvalidDataException();
-            }
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
+            string task = args.Length > 0 ? args[0] : "transcribe";
 
-            if (settings.Task == "transcribe")
+            if (task == "transcribe")
             {
-                string modelPath = await DownloadModelAsync(settings.ASRModel);
-                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
-                string inputPath = Path.Combine(inputDirPath, "transcript.txt");
-
-                using var model = new EncDecCTCModel(modelPath);
-                using var reader = File.OpenText(inputPath);
-                string? line;
-                while ((line = reader.ReadLine()) != null)
-                {
-                    string[] parts = line.Split("|");
-                    string name = parts[0];
-                    string targetText = parts[1];
-                    string waveFile = Path.Combine(inputDirPath, name);
-                    var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
-                    string predictText = model.Transcribe(audioSignal);
-                    Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
-                }
+                await Transcribe();
             }
-            else if (settings.Task == "classify")
+            else if (task == "vad")
             {
-                string modelPath = await DownloadModelAsync(settings.CommandModel);
-                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
-                string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
-                using var model = new EncDecClassificationModel(modelPath, mbn: true);
-                var audioSignal = WaveFile.ReadWAV(waveFile, 16000).AsSpan(0, 8000).ToArray();
-                string predictText = model.Transcribe(audioSignal);
-                Console.WriteLine("expected: yes, predicted: {0}", predictText);
+                await FramePredict(false);
             }
-            else if (settings.Task == "framevad")
+            else if (task == "mbn")
             {
-                string[] modelsPath = await DownloadModelsAsync(new[]
-                {
-                    settings.VADModel, settings.CommandModel
-                });
-                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
-                string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
-                using var model = new EncDecClassificationModel(modelsPath[0]);
-                var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
-                double step = 0.10;
-                double windowSize = 0.15;  // input segment length for NN we used for training
-                int sampleRate = 16000;
-                double frameLength = step;
-                int pad = (int)((windowSize - step) * sampleRate);
-                int chunkSize = (int)(frameLength * sampleRate);
-                int nWindowSize = (int)(windowSize * sampleRate);
-                var buffer = new short[audioSignal.Length + 2 * pad];
-                audioSignal.CopyTo(buffer.AsSpan(pad));
-                for (int offset = 0; offset + nWindowSize <= buffer.Length; offset += chunkSize)
-                {
-                    string vadText = model.Transcribe(buffer.AsSpan(offset, nWindowSize));
-                    double t = step - windowSize / 2 + (double)offset / sampleRate;
-                    Console.WriteLine("time: {0:0.000}, vad: {1}", t, vadText);
-                }
+                await FramePredict(true);
             }
-            else if (settings.Task == "frame")
+            else if (task == "socketaudio")
             {
-                string[] modelsPath = await DownloadModelsAsync(new[]
-                {
-                    settings.VADModel, settings.CommandModel
-                });
-                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
-                string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
-                using var vad = new EncDecClassificationModel(modelsPath[0]);
-                using var mbn = new EncDecClassificationModel(modelsPath[1], mbn: true);
-                var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
-                double step = 0.25;
-                double windowSize = 1.28;  // input segment length for NN we used for training
-                int sampleRate = 16000;
-                double frameLength = step;
-                int pad = (int)((windowSize - step) * sampleRate);
-                int chunkSize = (int)(frameLength * sampleRate);
-                int nWindowSize = (int)(windowSize * sampleRate);
-                var buffer = new short[audioSignal.Length + 2 * pad];
-                audioSignal.CopyTo(buffer.AsSpan(pad));
-                for (int offset = 0; offset + nWindowSize <= buffer.Length; offset += chunkSize)
-                {
-                    string vadText = vad.Transcribe(buffer.AsSpan(offset, nWindowSize));
-                    string mbnText = mbn.Transcribe(buffer.AsSpan(offset, nWindowSize));
-                    double t = step - windowSize / 2 + (double)offset / sampleRate;
-                    Console.WriteLine("time: {0:0.000}, vad: {1}, mbn: {2}", t, vadText, mbnText);
-                }
-            }
-            else if (settings.Task == "frame2")
-            {
-                string modelPath = await DownloadModelAsync(settings.CommandModel);
-                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
-                string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
-                using var model = new EncDecClassificationModel(modelPath, mbn: true);
-                var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
-                double step = 0.25;
-                double windowSize = 1.28;  // input segment length for NN we used for training
-                double frameLength = step;
-                int sampleRate = 16000;
-                int chunkSize = (int)(frameLength * sampleRate);
-                int nFrameLength = (int)(frameLength * sampleRate);
-                double frameOverlap = (windowSize - frameLength) / 2;
-                int nFrameOverlap = (int)(frameOverlap * sampleRate);
-                var buffer = new short[2 * nFrameOverlap + nFrameLength];
-                audioSignal.AsSpan(0, buffer.Length).CopyTo(buffer);
-                string predictText = model.Transcribe(buffer);
-                Console.WriteLine("predicted: {0}", predictText);
-            }
-            else if (settings.Task == "socketaudio")
-            {
-                string modelPath = await DownloadModelAsync(settings.VADModel);
+                string modelPath = await DownloadModelAsync("vad_marblenet");
                 RunSocketAudio(modelPath);
                 return;
             }
-            else if (settings.Task == "streamaudio")
+            else if (task == "streamaudio")
             {
                 var modelPaths = await DownloadModelsAsync(new string?[]
                 {
-                    settings.VADModel, settings.ASRModel
+                    "vad_marblenet", "stt_en_quartznet15x5"
                 });
                 RunFileStreamAudio(basePath, modelPaths);
                 return;
             }
-            else if (settings.Task == "vad")
-            {
-                string modelPath = await DownloadModelAsync(settings.VADModel);
-                string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
-                string inputPath = Path.Combine(inputDirPath, "transcript.txt");
-                using var vad = new EncDecClassificationModel(modelPath);
-                using var reader = File.OpenText(inputPath);
-                string? line;
-                while ((line = reader.ReadLine()) != null)
-                {
-                    string[] parts = line.Split("|");
-                    string name = parts[0];
-                    string targetText = parts[1];
-                    string waveFile = Path.Combine(inputDirPath, name);
-                    var waveform = WaveFile.ReadWAV(waveFile, 16000);
-                    var rng = new Random();
-                    // for (int i = 0; i < waveform.Length; i++)
-                    // {
-                    //     waveform[i] = (short)((rng.Next() & 65535) - 32768);
-                    // }
-                    var predictText = vad.Transcribe(waveform);
-                    Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
-                }
-            }
             else
             {
-                throw new InvalidDataException();
+                throw new InvalidDataException(task);
+            }
+        }
+
+        static async Task Transcribe()
+        {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string modelPath = await DownloadModelAsync("stt_en_quartznet15x5");
+            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
+            string inputPath = Path.Combine(inputDirPath, "transcript.txt");
+
+            using var model = new EncDecCTCModel(modelPath);
+            using var reader = File.OpenText(inputPath);
+            string? line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                string[] parts = line.Split("|");
+                string name = parts[0];
+                string targetText = parts[1];
+                string waveFile = Path.Combine(inputDirPath, name);
+                var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
+                string predictText = model.Transcribe(audioSignal);
+                Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
+            }
+        }
+
+        static async Task FramePredict(bool mbn)
+        {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string modelPath = await DownloadModelAsync(
+                mbn ? "commandrecognition_en_matchboxnet3x1x64_v2" : "vad_marblenet");
+            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
+            string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
+            using var model = new EncDecClassificationModel(modelPath, mbn);
+            var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
+            double windowStride = 0.10;
+            double windowSize = mbn ? 1.28 : 0.15;
+            int sampleRate = 16000;
+            int nWindowStride = (int)(windowStride * sampleRate);
+            int nWindowSize = (int)(windowSize * sampleRate);
+            var buffer = new short[audioSignal.Length + nWindowSize];
+            audioSignal.CopyTo(buffer.AsSpan(nWindowSize / 2));
+            for (int offset = 0; offset + nWindowSize <= buffer.Length; offset += nWindowStride)
+            {
+                string predictedText = model.Transcribe(buffer.AsSpan(offset, nWindowSize));
+                double t = (double)offset / sampleRate;
+                Console.WriteLine("time: {0:0.000}, predicted: {1}", t, predictedText);
             }
         }
 
