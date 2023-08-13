@@ -65,7 +65,7 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
-        public async Task<string> MayDownloadAsync(
+        public async Task MayDownloadAsync(
             string filePath, string url, string sha256,
             CancellationToken cancellationToken = default)
         {
@@ -82,7 +82,6 @@ namespace NeMoOnnxSharp.Example
                     throw new InvalidDataException();
                 }
             }
-            return filePath;
         }
 
         private async Task DownloadAsync(

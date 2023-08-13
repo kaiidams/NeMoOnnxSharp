@@ -234,7 +234,7 @@ namespace NeMoOnnxSharp.Example
                 string fileName = GetFileNameFromUrl(info.Location);
                 string filePath = Path.Combine(cacheDirectoryPath, fileName);
                 Console.WriteLine("Model: {0}", model);
-                string modelPath = await downloader.MayDownloadAsync(filePath, info.Location, info.Hash);
+                await downloader.MayDownloadAsync(filePath, info.Location, info.Hash);
                 modelPaths.Add(filePath);
             }
             return modelPaths.ToArray();
