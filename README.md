@@ -24,12 +24,12 @@ git clone https://github.com/kaiidams/NeMoOnnxSharp.git
 ```
 
 Run `dotnet` command to run the program. The project file
-is for .NET Core 3.1 SDK. This should work either with
+is for .NET Core 7.0 SDK. This should work either with
 Linux and Windows, also probably with MacOS.
 
 ```
-cd NeMoOnnxSharp/NeMoOnnxSharp
-dotnet run
+cd NeMoOnnxSharp
+dotnet run --project NeMoOnnxSharp.Example
 ```
 
 If you are more famililar to Visual Studio, you can open
