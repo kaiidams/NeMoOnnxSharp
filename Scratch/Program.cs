@@ -28,6 +28,9 @@ namespace NeMoOnnxSharp.Scratch
             }
             Console.WriteLine("decoded: {0}", decoded);
             Console.WriteLine("end");
+
+            var specGen = new SpectrogramGenerator(@"C:\Users\kaiida\source\Repos\kaiidams\NeMoOnnxSharp\tts_en_fastpitch.onnx");
+            specGen.GenerateSpectrogram(new int[1] { 1 });
         }
     }
 }
