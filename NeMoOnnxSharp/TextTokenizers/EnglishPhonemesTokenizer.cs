@@ -141,9 +141,13 @@ namespace NeMoOnnxSharp.TextTokenizers
             return EncodeFromG2p(ps.ToArray());
         }
 
-        private int[] EncodeFromG2p(string[] g2pText)
+        public int[] EncodeFromG2p(string[] g2pText)
         {
-            return g2pText.Select(p => _token2id[p]).ToArray();
+            var ps = new List<int>();
+            ps.Add(0);
+            ps.AddRange(g2pText.Select(p => _token2id[p]));
+            ps.Add(0);
+            return ps.ToArray();
         }
 
         private readonly string[] PunctList =
