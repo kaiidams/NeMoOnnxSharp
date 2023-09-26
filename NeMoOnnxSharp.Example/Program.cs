@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -32,6 +33,10 @@ namespace NeMoOnnxSharp.Example
             else if (task == "mbn")
             {
                 await FramePredict(true);
+            }
+            else if (task == "speak")
+            {
+                await Speak();
             }
             else if (task == "socketaudio")
             {
@@ -74,6 +79,21 @@ namespace NeMoOnnxSharp.Example
                 string predictText = model.Transcribe(audioSignal);
                 Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
             }
+        }
+
+        static async Task Speak()
+        {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string specGenModelPath = await DownloadModelAsync("tts_en_fastpitch");
+            string vocoderModelPath = await DownloadModelAsync("tts_en_hifigan");
+            var specGen = new SpectrogramGenerator(specGenModelPath);
+            var vocoder = new Vocoder(vocoderModelPath);
+            var parsed = new int[] { 0, 1, 2, 3, 0 };
+            var spec = specGen.GenerateSpectrogram(parsed, pace: 1.0);
+            var audio = vocoder.ConvertSpectrogramToAudio(spec);
+            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
+            string waveFile = Path.Combine(inputDirPath, "FastPitch_HiFiGAN_demo.wav");
+            WaveFile.WriteWAV(waveFile, audio, 22050);
         }
 
         static async Task FramePredict(bool mbn)

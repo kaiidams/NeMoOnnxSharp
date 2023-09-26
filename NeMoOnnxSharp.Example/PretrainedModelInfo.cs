@@ -44,6 +44,16 @@ namespace NeMoOnnxSharp.Example
                     "commandrecognition_en_matchboxnet3x1x64_v2",
                     "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.1/commandrecognition_en_matchboxnet3x1x64_v2.onnx",
                     "a0c5e4d14e83d3b6afdaf239265a390c2ca513bcdedf3d295bc1f9f97f19868a"
+                ),
+                new PretrainedModelInfo(
+                    "tts_en_fastpitch",
+                    "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.2/tts_en_fastpitch.onnx",
+                    "a297174dea1084bd34d1af1a8447bc07f6c8aab7a4fea312c610eba6bc3d0eac"
+                ),
+                new PretrainedModelInfo(
+                    "tts_en_hifigan",
+                    "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.1/tts_en_hifigan.onnx",
+                    "54501000b9de86b724931478b5bb8911e1b6ca6e293f68e9e10f60351f1949a3"
                 )
             };
         }

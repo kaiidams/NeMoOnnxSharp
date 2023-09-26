@@ -35,7 +35,7 @@ namespace NeMoOnnxSharp
             _inferSess.Dispose();
         }
 
-        public float[] ConvertSpectrogramToAudio(float[] spec)
+        public short[] ConvertSpectrogramToAudio(float[] spec)
         {
             var container = new List<NamedOnnxValue>();
             var specData = new DenseTensor<float>(
@@ -48,7 +48,7 @@ namespace NeMoOnnxSharp
                 var audioTensor = res.First().AsTensor<float>();
                 audio = audioTensor.ToArray();
             }
-            return audio;
+            return audio.Select(x => (short)(x * short.MaxValue)).ToArray();
         }
     }
 }
