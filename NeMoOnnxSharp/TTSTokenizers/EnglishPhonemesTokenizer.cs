@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace NeMoOnnxSharp.TextTokenizers
+namespace NeMoOnnxSharp.TTSTokenizers
 {
     // nemo.collections.tts.torch.tts_tokenizers.EnglishPhonemesTokenizer
     public class EnglishPhonemesTokenizer : BaseTokenizer
@@ -128,17 +128,7 @@ namespace NeMoOnnxSharp.TextTokenizers
         public override int[] Encode(string text)
         {
             var g2pText = _g2p.Parse(text);
-            var ps = new List<string>();
-            foreach (var t in g2pText)
-            {
-                foreach (var c in t.ToLower())
-                {
-                    if (_token2id.ContainsKey(c.ToString()))
-                        ps.Add(c.ToString());
-                }
-
-            }
-            return EncodeFromG2p(ps.ToArray());
+            return EncodeFromG2p(g2pText);
         }
 
         public int[] EncodeFromG2p(string[] g2pText)

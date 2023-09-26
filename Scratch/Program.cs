@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using NeMoOnnxSharp.TextTokenizers;
+using NeMoOnnxSharp.TTSTokenizers;
 
 namespace NeMoOnnxSharp.Scratch
 {
@@ -30,12 +30,11 @@ namespace NeMoOnnxSharp.Scratch
                 padWithSpace: true,
                 addBlankAt: BaseTokenizer.AddBlankAt.True);
 
-            var parsed = tokenizer.EncodeFromG2p(ParsedText.Split('|'));
-
-            var specGen = new SpectrogramGenerator(@"C:\Users\kaiida\source\Repos\kaiidams\NeMoOnnxSharp\tts_en_fastpitch.onnx");
+            var specGen = new SpectrogramGenerator(@"C:\Users\kaiida\AppData\Local\NeMoOnnxSharp\Cache\tts_en_fastpitch.onnx");
+            var parsed = specGen.Parse(ParsedText);
             var spec = specGen.GenerateSpectrogram(parsed, pace: 1.0);
 
-            var vocoder = new Vocoder(@"C:\Users\kaiida\source\Repos\kaiidams\NeMoOnnxSharp\tts_en_hifigan.onnx");
+            var vocoder = new Vocoder(@"C:\Users\kaiida\AppData\Local\NeMoOnnxSharp\Cache\tts_en_hifigan.onnx");
             var audio = vocoder.ConvertSpectrogramToAudio(spec);
             var x = audio.Select(x => (short)(x * 32765)).ToArray();
             WaveFile.WriteWAV(@"C:\Users\kaiida\source\Repos\kaiidams\NeMoOnnxSharp\test.wav", x, 22050);

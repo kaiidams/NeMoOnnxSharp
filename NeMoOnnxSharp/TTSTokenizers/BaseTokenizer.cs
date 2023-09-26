@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace NeMoOnnxSharp.TextTokenizers
+namespace NeMoOnnxSharp.TTSTokenizers
 {
     public abstract class BaseTokenizer
     {

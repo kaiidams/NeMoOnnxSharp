@@ -3,7 +3,7 @@
 
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using NeMoOnnxSharp.TextTokenizers;
+using NeMoOnnxSharp.TTSTokenizers;
 using System;
 using System.Collections.Generic;
 using System.Linq;

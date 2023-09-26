@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace NeMoOnnxSharp.TextTokenizers
+namespace NeMoOnnxSharp.TTSTokenizers
 {
     // nemo.collections.tts.torch.g2ps.EnglishG2p
     public class EnglishG2p
@@ -30,7 +30,7 @@ namespace NeMoOnnxSharp.TextTokenizers
 
         public string[] Parse(string text)
         {
-            return text.ToCharArray().Select(ch => ch.ToString()).ToArray();
+            return text.Split('|');
         }
     }
 }
