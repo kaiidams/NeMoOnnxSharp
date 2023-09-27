@@ -52,7 +52,7 @@ namespace NeMoOnnxSharp.Example
                 ),
                 new PretrainedModelInfo(
                     "tts_en_hifigan",
-                    "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.1/tts_en_hifigan.onnx",
+                    "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.2/tts_en_hifigan.onnx",
                     "54501000b9de86b724931478b5bb8911e1b6ca6e293f68e9e10f60351f1949a3"
                 )
             };

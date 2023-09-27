@@ -13,10 +13,13 @@ namespace NeMoOnnxSharp
     public class Vocoder : IDisposable
     {
         private readonly InferenceSession _inferSess;
-
+        private readonly int _nfilt;
+        private readonly int _sampleRate;
         private Vocoder(InferenceSession inferSess)
         {
             _inferSess = inferSess;
+            _nfilt = 80;
+            _sampleRate = 22050;
         }
 
         public Vocoder(string modelPath)
@@ -29,6 +32,8 @@ namespace NeMoOnnxSharp
         {
         }
 
+        public int SampleRate { get { return _sampleRate; } }
+
         public void Dispose()
         {
             _inferSess.Dispose();
@@ -39,7 +44,7 @@ namespace NeMoOnnxSharp
             var container = new List<NamedOnnxValue>();
             var specData = new DenseTensor<float>(
                 spec,
-                new int[3] { 1, 80, spec.Length / 80 });
+                new int[3] { 1, _nfilt, spec.Length / _nfilt });
             container.Add(NamedOnnxValue.CreateFromTensor("spec", specData));
             float[] audio;
             using (var res = _inferSess.Run(container, new string[] { "audio" }))

@@ -25,6 +25,5 @@ namespace NeMoOnnxSharp
             }
             return transposedSignal;
         }
-
     }
 }
