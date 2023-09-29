@@ -131,6 +131,7 @@ namespace NeMoOnnxSharp.TTSTokenizers
 
         public override int[] Encode(string text)
         {
+            text = TokenizerUtils.EnglishTextPreprocessing(text);
             var g2pText = _g2p.Parse(text);
             return EncodeFromG2P(g2pText);
         }
