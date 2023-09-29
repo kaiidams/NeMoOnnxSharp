@@ -17,7 +17,7 @@ namespace NeMoOnnxSharp.Scratch
 
         static void Main(string[] args)
         {
-            var g2p = new EnglishG2p(
+            var g2p = new EnglishG2P(
                 phonemeDict: "../../scripts/tts_dataset_files/cmudict-0.7b_nv22.10",
                 heteronyms: "../../scripts/tts_dataset_files/heteronyms-052722",
                 phonemeProbability: 0.5);

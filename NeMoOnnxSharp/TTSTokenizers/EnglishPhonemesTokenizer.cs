@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace NeMoOnnxSharp.TTSTokenizers
 {
@@ -123,21 +124,75 @@ namespace NeMoOnnxSharp.TTSTokenizers
                 Enumerable.Range(0, _id2token.Length)
                 .Select(i => new KeyValuePair<string, int>(_id2token[i], i)));
             _utilIds = new HashSet<int>() { _pad, _blank, _oov };
+
+            _stresses = stresses;
+            _punct = punct;
         }
 
         public override int[] Encode(string text)
         {
             var g2pText = _g2p.Parse(text);
-            return EncodeFromG2p(g2pText);
+            return EncodeFromG2P(g2pText);
         }
 
-        public int[] EncodeFromG2p(string[] g2pText)
+        /// <summary>
+        /// Encodes text that has already been run through G2P.
+        /// Called for encoding to tokens after text preprocessing and G2P.
+        /// </summary>
+        /// <param name="g2pText">G2P's output, could be a mixture of phonemes and graphemes,
+        ///        e.g. "see OOV" -> ['S', 'IY1', ' ', 'O', 'O', 'V']</param>
+        /// <returns></returns>
+        public int[] EncodeFromG2P(string[] g2pText)
         {
-            var ps = new List<int>();
-            ps.Add(0);
-            ps.AddRange(g2pText.Select(p => _token2id[p]));
-            ps.Add(0);
-            return ps.ToArray();
+            var ps = new List<string>();
+            var space = _id2token[_space];
+            foreach (var _p in g2pText)
+            {
+                string p = _p;
+                // Remove stress
+                if (p.Length == 3 && !_stresses)
+                {
+                    p = p.Substring(0, 2);
+                }
+
+                // Add space if last one isn't one
+                if (p == space && ps.Count > 0 && ps[ps.Count - 1] != space)
+                {
+                    ps.Add(p);
+                }
+                // Add next phoneme or char (if chars=true)
+                else if ((char.IsLetterOrDigit(p, 0) || p == "'") && _token2id.ContainsKey(p))
+                {
+                    ps.Add(p); 
+                }
+                // Add punct
+                else if (_punct && !char.IsLetterOrDigit(p, 0) && _token2id.ContainsKey(p))
+                {
+                    ps.Add(p);
+                }
+                else if (p != space)
+                {
+                    // Unknown char/phoneme
+                }
+            }
+
+            // Remove trailing spaces
+            while (ps.Count > 0 && ps[ps.Count - 1] == space)
+            {
+                ps.RemoveAt(ps.Count - 1);
+            }
+
+            var res = new List<int>();
+            if (_padWithSpace)
+            {
+                res.Add(0);
+            }
+            res.AddRange(g2pText.Select(p => _token2id[p]));
+            if (_padWithSpace)
+            {
+                res.Add(0);
+            }
+            return res.ToArray();
         }
 
         private readonly string[] PunctList =
@@ -162,5 +217,7 @@ namespace NeMoOnnxSharp.TTSTokenizers
 
         private readonly EnglishG2p _g2p;
         private readonly object? _phonemeProbability;
+        private readonly bool _stresses;
+        private readonly bool _punct;
     }
 }
