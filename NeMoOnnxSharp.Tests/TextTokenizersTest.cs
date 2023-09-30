@@ -1,5 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NeMoOnnxSharp.TextTokenizers;
+using NeMoOnnxSharp.TTSTokenizers;
 using System;
 using System.Diagnostics;
 using System.IO;

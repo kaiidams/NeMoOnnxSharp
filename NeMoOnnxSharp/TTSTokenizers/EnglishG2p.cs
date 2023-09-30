@@ -62,14 +62,20 @@ namespace NeMoOnnxSharp.TTSTokenizers
 
         public string[] Parse(string text)
         {
-            var words = text.Split(' ');
+            var words = TokenizerUtils.EnglishWordTokenize(text);
             var prons = new List<string>();
-            foreach (var word in words)
+            foreach (var (word, withoutChanges) in words)
             {
-                var wordStr = word;
-                var wordByHyphen = wordStr.Split('-');
+                if (withoutChanges)
+                {
+                    prons.AddRange(word);
+                    continue;
+                }
 
+                var wordStr = word[0];
+                var wordByHyphen = wordStr.Split('-');
                 var (pron, isHandled) = ParseOneWord(wordStr);
+
                 if (!isHandled && wordByHyphen.Length > 1)
                 {
                     pron = new List<string>();
@@ -90,19 +96,49 @@ namespace NeMoOnnxSharp.TTSTokenizers
         {
             if (_phonemeProbability < 1.0 && _random.NextDouble() > _phonemeProbability)
             {
-                return (word.Select(x => x.ToString()).ToList(), true);
+                return (StringToStringList(word), true);
             }
 
             // punctuation or whitespace.
             if (!_alnumRx.IsMatch(word))
             {
-                return (word.Select(x => x.ToString()).ToList(), true);
+                return (StringToStringList(word), true);
             }
 
             // heteronyms
             if (_heteronyms != null && _heteronyms.Contains(word))
             {
-                return (word.Select(x => x.ToString()).ToList(), true);
+                return (StringToStringList(word), true);
+            }
+
+            // `'s` suffix
+            if (word.Length > 2
+                && word.EndsWith("'s")
+                && !_phonemeDict.ContainsKey(word))
+            {
+                var sword = word.Substring(0, word.Length - 2);
+                if (_phonemeDict.ContainsKey(sword)
+                    && (!_ignoreAmbiguousWords || _IsUniqueInPhonemeDict(sword)))
+                {
+                    var pron = _phonemeDict[sword][0].Split(" ").ToList();
+                    pron.Add("Z");
+                    return (pron, true);
+                }
+            }
+
+            // `s` suffix
+            if (word.Length > 1
+                && word.EndsWith("s")
+                && !_phonemeDict.ContainsKey(word))
+            {
+                var sword = word.Substring(0, word.Length - 1);
+                if (_phonemeDict.ContainsKey(sword)
+                    && (!_ignoreAmbiguousWords || _IsUniqueInPhonemeDict(sword)))
+                {
+                    var pron = _phonemeDict[sword][0].Split(" ").ToList();
+                    pron.Add("Z");
+                    return (pron, true);
+                }
             }
 
             // phoneme dict
@@ -111,7 +147,12 @@ namespace NeMoOnnxSharp.TTSTokenizers
                 return (_phonemeDict[word][0].Split(" ").ToList(), true);
             }
 
-            return (word.Select(x => x.ToString()).ToList(), false);
+            return (StringToStringList(word), false);
+        }
+
+        private List<string> StringToStringList(string word)
+        {
+            return word.Select(x => x.ToString()).ToList();
         }
 
         private bool _IsUniqueInPhonemeDict(string word)
