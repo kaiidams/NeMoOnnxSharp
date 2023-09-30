@@ -133,7 +133,7 @@ namespace NeMoOnnxSharp.TTSTokenizers
         {
             text = TokenizerUtils.EnglishTextPreprocessing(text);
             var g2pText = _g2p.Parse(text);
-            return EncodeFromG2P(g2pText);
+            return EncodeFromG2p(g2pText);
         }
 
         /// <summary>
@@ -143,7 +143,7 @@ namespace NeMoOnnxSharp.TTSTokenizers
         /// <param name="g2pText">G2P's output, could be a mixture of phonemes and graphemes,
         ///        e.g. "see OOV" -> ['S', 'IY1', ' ', 'O', 'O', 'V']</param>
         /// <returns></returns>
-        public int[] EncodeFromG2P(string[] g2pText)
+        public int[] EncodeFromG2p(string[] g2pText)
         {
             var ps = new List<string>();
             var space = _id2token[_space];

@@ -45,6 +45,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Data\cmudict-test">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\heteronyms-test">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Data\make_test.py">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>

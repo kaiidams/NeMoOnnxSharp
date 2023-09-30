@@ -3,8 +3,6 @@ using NeMoOnnxSharp.TTSTokenizers;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace NeMoOnnxSharp.Tests
 {
@@ -25,40 +23,35 @@ namespace NeMoOnnxSharp.Tests
             "\"", "(", ")", "[", "]", "{", "}", "<pad>", "<blank>", "<oov>"
         };
 
-        private const string NormalizedText =
-            "Conscious of its spiritual and moral heritage, the Union is "
-            + "founded on the indivisible, universal values of human dignity, "
-            + "freedom, equality and solidarity";
+        private const string SampleText =
+            "You've read the book ÅgOperating Systems Design and Implementation, 3rd editionÅh. Did you?";
+        private const string NormalizedSampleText =
+            "You've read the book ÅgOperating Systems Design and Implementation, third editionÅh. Did you?";
+        private const string SamplePronText =
+            "Y|UW1|V| |r|e|a|d| |t|h|e| |B|UH1|K| |Åg|o|p|e|r|a|t|i|n|g| |"
+            + "S|IH1|S|T|AH0|M|Z| |D|IH0|Z|AY1|N| |a|n|d| |IH2|M|P|L|AH0|"
+            + "M|EH0|N|T|EY1|SH|AH0|N|,| |TH|ER1|D| |e|d|i|t|i|o|n|Åh|.| |"
+            + "d|i|d| |Y|UW1|?";
 
-        private const string ParsedText =
-            "K|AA1|N|SH|AH0|S| |o|f| |i|t|s| |S|P|IH1|R|IH0|CH|UW2|AH0|"
-            + "L| |a|n|d| |M|AO1|R|AH0|L| |h|e|r|i|t|a|g|e|,| |t|h|e| |Y|"
-            + "UW1|N|Y|AH0|N| |i|s| |F|AW1|N|D|IH0|D| |o|n| |t|h|e| |IH2|"
-            + "N|D|IH0|V|IH1|S|IH0|B|AH0|L|,| |Y|UW2|N|AH0|V|ER1|S|AH0|L|"
-            + " |V|AE1|L|Y|UW0|Z| |o|f| |h|u|m|a|n| |D|IH1|G|N|AH0|T|IY0|"
-            + ",| |F|R|IY1|D|AH0|M|,| |IH0|K|W|AA1|L|AH0|T|IY0| |a|n|d| |"
-            + "S|AA2|L|AH0|D|EH1|R|AH0|T|IY0";
-
-        private readonly static int[] ExpectedParsed =
+        private readonly static int[] SampleParsed =
         {
-            0,  9, 26, 12, 17, 31, 16,  0, 84, 75,  0, 78, 89, 88,  0, 16, 14, 53,
-            15, 52,  2, 69, 31, 10,  0, 70, 83, 73,  0, 11, 35, 15, 31, 10,  0, 77,
-            74, 87, 78, 89, 70, 76, 74, 97,  0, 89, 77, 74,  0, 22, 68, 12, 22, 31,
-            12,  0, 78, 88,  0,  5, 38, 12,  3, 52,  3,  0, 84, 83,  0, 89, 77, 74,
-            0, 54, 12,  3, 52, 20, 53, 16, 52,  1, 31, 10, 97,  0, 22, 69, 12, 31,
-            20, 47, 16, 31, 10,  0, 20, 29, 10, 22, 67, 23,  0, 84, 75,  0, 77, 90,
-            82, 70, 83,  0,  3, 53,  6, 12, 31, 18, 55, 97,  0,  5, 15, 56,  3, 31,
-            11, 97,  0, 52,  9, 21, 26, 10, 31, 18, 55,  0, 70, 83, 73,  0, 16, 27,
-            10, 31,  3, 44, 15, 31, 18, 55,  0
+             0,  22,  68,  20,   0,  87,  74,  70,  73,   0,  89,  77,  74,
+             0,   1,  65,   9,   0, 105,  84,  85,  74,  87,  70,  89,  78,
+            83,  76,   0,  16,  53,  16,  18,  31,  11,  23,   0,   3,  52,
+            23,  41,  12,   0,  70,  83,  73,   0,  54,  11,  14,  10,  31,
+            11,  43,  12,  18,  50,  17,  31,  12,  97,   0,  19,  47,   3,
+             0,  74,  73,  78,  89,  78,  84,  83, 105,  98,   0,  73,  78,
+            73,   0,  22,  68, 100,   0
         };
 
         [TestInitialize]
         public void Initialize()
         {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             _g2p = new EnglishG2p(
-                phonemeDict: "../../scripts/tts_dataset_files/cmudict-0.7b_nv22.10",
-                heteronyms: "../../scripts/tts_dataset_files/heteronyms-052722",
-                phonemeProbability: 0.5);
+                phonemeDict: Path.Combine(appDirPath, "Data", "cmudict-test"),
+                heteronyms: Path.Combine(appDirPath, "Data", "heteronyms-test"),
+                phonemeProbability: 1.0);
             _tokenizer = new EnglishPhonemesTokenizer(
                 _g2p,
                 punct: true,
@@ -70,16 +63,23 @@ namespace NeMoOnnxSharp.Tests
         }
 
         [TestMethod]
-        public void Test1()
+        public void TestTokenizerVocab()
         {
             CollectionAssert.AreEquivalent(ExpectedTokens, _tokenizer.Tokens);
         }
 
         [TestMethod]
-        public void Test2()
+        public void TestEnglishG2p()
         {
-            var parsed = _tokenizer.EncodeFromG2p(ParsedText.Split('|'));
-            CollectionAssert.AreEquivalent(ExpectedParsed, parsed);
+            var pron = string.Join("|", _g2p.Parse(NormalizedSampleText));
+            Assert.AreEqual(SamplePronText, pron);
+        }
+
+        [TestMethod]
+        public void TestEnglishEncode()
+        {
+            var parsed = _tokenizer.Encode(NormalizedSampleText);
+            CollectionAssert.AreEquivalent(SampleParsed, parsed);
         }
 
         private EnglishG2p? _g2p;
