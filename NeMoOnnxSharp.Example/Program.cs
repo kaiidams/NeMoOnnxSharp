@@ -9,7 +9,6 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
 
 namespace NeMoOnnxSharp.Example
 {
