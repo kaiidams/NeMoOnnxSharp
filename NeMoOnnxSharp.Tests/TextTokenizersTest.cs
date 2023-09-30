@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+Ôªøusing Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeMoOnnxSharp.TTSTokenizers;
 using System;
 using System.Diagnostics;
@@ -24,13 +24,13 @@ namespace NeMoOnnxSharp.Tests
         };
 
         private const string SampleText =
-            "You've read the book ÅgOperating Systems Design and Implementation, 3rd editionÅh. Did you?";
+            "You've read the book ‚ÄúOperating Systems Design and Implementation, 3rd edition‚Äù. Did you?";
         private const string NormalizedSampleText =
-            "You've read the book ÅgOperating Systems Design and Implementation, third editionÅh. Did you?";
+            "You've read the book ‚ÄúOperating Systems Design and Implementation, third edition‚Äù. Did you?";
         private const string SamplePronText =
-            "Y|UW1|V| |r|e|a|d| |t|h|e| |B|UH1|K| |Åg|o|p|e|r|a|t|i|n|g| |"
+            "Y|UW1|V| |r|e|a|d| |t|h|e| |B|UH1|K| |‚Äú|o|p|e|r|a|t|i|n|g| |"
             + "S|IH1|S|T|AH0|M|Z| |D|IH0|Z|AY1|N| |a|n|d| |IH2|M|P|L|AH0|"
-            + "M|EH0|N|T|EY1|SH|AH0|N|,| |TH|ER1|D| |e|d|i|t|i|o|n|Åh|.| |"
+            + "M|EH0|N|T|EY1|SH|AH0|N|,| |TH|ER1|D| |e|d|i|t|i|o|n|‚Äù|.| |"
             + "d|i|d| |Y|UW1|?";
 
         private readonly static int[] SampleParsed =

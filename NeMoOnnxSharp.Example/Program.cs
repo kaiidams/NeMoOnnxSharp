@@ -9,7 +9,6 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -25,6 +24,10 @@ namespace NeMoOnnxSharp.Example
             if (task == "transcribe")
             {
                 await Transcribe();
+            }
+            else if (task == "speak")
+            {
+                await Speak();
             }
             else if (task == "vad")
             {
@@ -87,10 +90,10 @@ namespace NeMoOnnxSharp.Example
                 + "founded on the indivisible, universal values of human dignity, "
                 + "freedom, equality and solidarity";
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string phonemeDict = await DownloadModelAsync("cmudict-0.7b_nv22.10");
+            string heteronyms = await DownloadModelAsync("heteronyms-052722");
             string specGenModelPath = await DownloadModelAsync("tts_en_fastpitch");
             string vocoderModelPath = await DownloadModelAsync("tts_en_hifigan");
-            string phonemeDict = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data", "cmudict-0.7b_nv22.10");
-            string heteronyms = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data", "heteronyms-052722");
             var specGen = new SpectrogramGenerator(specGenModelPath, phonemeDict, heteronyms);
             var vocoder = new Vocoder(vocoderModelPath);
             var parsed = specGen.Parse(strText);
