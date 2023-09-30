@@ -56,6 +56,11 @@ namespace NeMoOnnxSharp.Example
                     "b701909aedf753172eff223950f8859cd4b9b4c80199cf0a6e9ac4a307c8f8ec"
                 ),
                 new PretrainedModelInfo(
+                    "tts_en_fastpitch",
+                    "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.2/tts_en_fastpitch.onnx",
+                    "a297174dea1084bd34d1af1a8447bc07f6c8aab7a4fea312c610eba6bc3d0eac"
+                ),
+                new PretrainedModelInfo(
                     "tts_en_hifigan",
                     "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.2/tts_en_hifigan.onnx",
                     "54501000b9de86b724931478b5bb8911e1b6ca6e293f68e9e10f60351f1949a3"
