@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -19,7 +20,7 @@ namespace NeMoOnnxSharp.Example
         static async Task Main(string[] args)
         {
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string task = args.Length > 0 ? args[0] : "transcribe";
+            string task = args.Length > 0 ? args[0] : "speak";
 
             if (task == "transcribe")
             {
@@ -86,22 +87,30 @@ namespace NeMoOnnxSharp.Example
 
         static async Task Speak()
         {
-            string strText = "Conscious of its spiritual and moral heritage, the Union is "
-                + "founded on the indivisible, universal values of human dignity, "
-                + "freedom, equality and solidarity";
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             string phonemeDict = await DownloadModelAsync("cmudict-0.7b_nv22.10");
             string heteronyms = await DownloadModelAsync("heteronyms-052722");
             string specGenModelPath = await DownloadModelAsync("tts_en_fastpitch");
             string vocoderModelPath = await DownloadModelAsync("tts_en_hifigan");
+            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
+            string inputPath = Path.Combine(inputDirPath, "transcript.txt");
+
             var specGen = new SpectrogramGenerator(specGenModelPath, phonemeDict, heteronyms);
             var vocoder = new Vocoder(vocoderModelPath);
-            var parsed = specGen.Parse(strText);
-            var spec = specGen.GenerateSpectrogram(parsed, pace: 1.0);
-            var audio = vocoder.ConvertSpectrogramToAudio(spec);
-            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
-            string waveFile = Path.Combine(inputDirPath, "FastPitch_HiFiGAN_demo.wav");
-            WaveFile.WriteWAV(waveFile, audio, 22050);
+            using var reader = File.OpenText(inputPath);
+            string? line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                string[] parts = line.Split("|");
+                string name = "generated-" + parts[0];
+                string targetText = parts[1];
+                Console.WriteLine("Generating {0}...", name);
+                string waveFile = Path.Combine(inputDirPath, name);
+                var parsed = specGen.Parse(targetText);
+                var spec = specGen.GenerateSpectrogram(parsed, pace: 1.0);
+                var audio = vocoder.ConvertSpectrogramToAudio(spec);
+                WaveFile.WriteWAV(waveFile, audio, vocoder.SampleRate);
+            }
         }
 
         static async Task FramePredict(bool mbn)

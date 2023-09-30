@@ -48,10 +48,19 @@ namespace NeMoOnnxSharp
             _inferSess.Dispose();
         }
 
-        public int[] Parse(string strText, bool normalize = true)
+        public int[] Parse(string strInput, bool normalize = true)
         {
-            var encoded = _tokenizer.Encode(strText);
+            if (normalize)
+            {
+                strInput = _NormalizeText(strInput);
+            }
+            var encoded = _tokenizer.Encode(strInput);
             return encoded;
+        }
+
+        private string _NormalizeText(string strInput)
+        {
+            return strInput;
         }
 
         public float[] GenerateSpectrogram(int[] tokens, double pace = 1.0)
@@ -69,20 +78,12 @@ namespace NeMoOnnxSharp
                 Enumerable.Range(0, tokens.Length).Select(i => 0.0f).ToArray(),
                 new int[2] { 1, tokens.Length });
             container.Add(NamedOnnxValue.CreateFromTensor("pitch", pitchData));
-            using (var res = _inferSess.Run(container, new string[] { "pitch_predicted" }))
-            {
-                var pitchPredictedData = res.First().AsTensor<float>();
-                container[2] = NamedOnnxValue.CreateFromTensor("pitch", pitchPredictedData);
-            }
-
             float[] spec;
             using (var res = _inferSess.Run(container, new string[] { "spect" }))
             {
-                var spect = res.First().AsTensor<float>();
-                spec = spect.ToArray();
+                var pitchPredictedData = res.First().AsTensor<float>();
+                spec = pitchPredictedData.ToArray();
             }
-            // text pitch  pace spect num_frames durs_predicted
-            // log_durs_predicted pitch_predicted
             return spec;
         }
     }
