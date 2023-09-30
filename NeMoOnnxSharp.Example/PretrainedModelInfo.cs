@@ -46,6 +46,16 @@ namespace NeMoOnnxSharp.Example
                     "a0c5e4d14e83d3b6afdaf239265a390c2ca513bcdedf3d295bc1f9f97f19868a"
                 ),
                 new PretrainedModelInfo(
+                    "cmudict-0.7b_nv22.10",
+                    "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.2/cmudict-0.7b_nv22.10",
+                    "d330f3a3554d4c7ff8ef7bfc0c338ed74831d5f54109508fb829bdd82173608b"
+                ),
+                new PretrainedModelInfo(
+                    "heteronyms-052722",
+                    "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.2/heteronyms-052722",
+                    "b701909aedf753172eff223950f8859cd4b9b4c80199cf0a6e9ac4a307c8f8ec"
+                ),
+                new PretrainedModelInfo(
                     "tts_en_hifigan",
                     "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.2/tts_en_hifigan.onnx",
                     "54501000b9de86b724931478b5bb8911e1b6ca6e293f68e9e10f60351f1949a3"

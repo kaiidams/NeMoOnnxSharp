@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using NeMoOnnxSharp.TTSTokenizers;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -13,11 +14,15 @@ namespace NeMoOnnxSharp.Example
     {
         static async Task Main(string[] args)
         {
-            string task = args.Length == 0 ? "transcribe" : args[0];
+            string task = args.Length == 0 ? "speak" : args[0];
 
             if (task == "transcribe")
             {
                 await Transcribe();
+            }
+            else if (task == "speak")
+            {
+                await Speak();
             }
             else if (task == "vad")
             {
@@ -52,6 +57,23 @@ namespace NeMoOnnxSharp.Example
                 string predictText = model.Transcribe(audioSignal);
                 Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
             }
+        }
+
+        static async Task Speak()
+        {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string phoneDict = await DownloadModelAsync("cmudict-0.7b_nv22.10");
+            string heteronyms = await DownloadModelAsync("heteronyms-052722");
+            var g2p = new EnglishG2p(phoneDict, heteronyms);
+            var tokenizer = new EnglishPhonemesTokenizer(
+                g2p,
+                punct: true,
+                stresses: true,
+                chars: true,
+                apostrophe: true,
+                padWithSpace: true,
+                addBlankAt: BaseTokenizer.AddBlankAt.True);
+            tokenizer.Encode("Hello world!");
         }
 
         static async Task FramePredict(bool mbn)
