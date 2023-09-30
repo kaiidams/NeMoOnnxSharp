@@ -9,8 +9,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeMoOnnxSharp", "NeMoOnnxSh
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeMoOnnxSharp.Tests", "NeMoOnnxSharp.Tests\NeMoOnnxSharp.Tests.csproj", "{4D0C8A9F-0574-4645-A0C2-51393982ACC8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scratch", "Scratch\Scratch.csproj", "{4DA5DF6F-06F6-45DF-99ED-72BB405D3140}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,10 +27,6 @@ Global
 		{4D0C8A9F-0574-4645-A0C2-51393982ACC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4D0C8A9F-0574-4645-A0C2-51393982ACC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4D0C8A9F-0574-4645-A0C2-51393982ACC8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4DA5DF6F-06F6-45DF-99ED-72BB405D3140}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4DA5DF6F-06F6-45DF-99ED-72BB405D3140}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4DA5DF6F-06F6-45DF-99ED-72BB405D3140}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4DA5DF6F-06F6-45DF-99ED-72BB405D3140}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
