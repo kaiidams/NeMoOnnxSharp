@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -19,7 +20,7 @@ namespace NeMoOnnxSharp.Example
         static async Task Main(string[] args)
         {
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string task = args.Length > 0 ? args[0] : "speak";
+            string task = args.Length > 0 ? args[0] : "socketaudio";
 
             if (task == "transcribe")
             {
@@ -139,6 +140,7 @@ namespace NeMoOnnxSharp.Example
         private static void RunSocketAudio(string modelPath)
         {
             using var vad = new EncDecClassificationModel(modelPath);
+            using var framevad = new FrameVAD(vad);
             using Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
             socket.Connect("127.0.0.1", 17843);
             Console.WriteLine("Connected");
@@ -154,11 +156,10 @@ namespace NeMoOnnxSharp.Example
                     throw new InvalidDataException();
                 }
                 audioSignal.AddRange(MemoryMarshal.Cast<byte, short>(responseBytes.AsSpan(0, bytesReceived)).ToArray());
-                if (audioSignal.Count > 16000)
+                var result = framevad.Transcribe(audioSignal.ToArray());
+                foreach (var x in result)
                 {
-                    string text = vad.Transcribe(audioSignal.ToArray());
-                    Console.WriteLine("text: {0}", text);
-                    audioSignal.Clear();
+                    Console.WriteLine("vad: {0}", x);
                 }
             }
         }

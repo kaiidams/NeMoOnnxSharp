@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp
 {
@@ -28,6 +27,7 @@ namespace NeMoOnnxSharp
         public int WinLength => _winLength;
         public int OutputCount => _outputCount;
         public T2[] OutputBuffer => _outputBuffer;
+        public int OutputPosition => _outputCount * _hopLength + _inputCount;
 
         public AudioFeatureBuffer(
             IFeaturizer<T1, T2> transform,

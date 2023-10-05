@@ -28,17 +28,17 @@ namespace NeMoOnnxSharp
             "speech"
         };
 
-        private readonly IAudioPreprocessor<short, float> _processor;
+        private readonly IAudioPreprocessor<short, float> _preProcessor;
         private readonly InferenceSession _inferSess;
         private readonly int _nMelBands;
         private readonly string[] _labels;
 
-        public IAudioPreprocessor<short, float> Processor => _processor;
+        public IAudioPreprocessor<short, float> PreProcessor => _preProcessor;
 
         private EncDecClassificationModel(InferenceSession inferSess, bool speechCommands)
         {
             _nMelBands = 64;
-            _processor = new AudioToMFCCPreprocessor(
+            _preProcessor = new AudioToMFCCPreprocessor(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
                 windowSize: 0.025,
@@ -51,8 +51,8 @@ namespace NeMoOnnxSharp
             _inferSess = inferSess;
         }
 
-        public EncDecClassificationModel(string modelPath, bool mbn = false)
-            : this(new InferenceSession(modelPath), mbn)
+        public EncDecClassificationModel(string modelPath, bool speechCommands = false)
+            : this(new InferenceSession(modelPath), speechCommands)
         {
         }
 
@@ -69,7 +69,7 @@ namespace NeMoOnnxSharp
         public override string Transcribe(Span<short> inputSignal)
         {
             string text = string.Empty;
-            var processedSignal = _processor.GetFeatures(inputSignal);
+            var processedSignal = _preProcessor.GetFeatures(inputSignal);
             processedSignal = TransposeInputSignal(processedSignal, _nMelBands);
             var container = new List<NamedOnnxValue>();
             var audioSignalData = new DenseTensor<float>(
