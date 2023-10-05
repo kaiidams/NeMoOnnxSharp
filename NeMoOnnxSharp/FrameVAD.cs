@@ -13,6 +13,7 @@ namespace NeMoOnnxSharp
     {
         private readonly int _sampleRate;
         private readonly int _winLength;
+        private readonly int _hopLength;
         private readonly AudioFeatureBuffer<short, float> _featureBuffer;
         private readonly EncDecClassificationModel _vad;
 
@@ -20,6 +21,7 @@ namespace NeMoOnnxSharp
         {
             _sampleRate = 16000;
             _winLength = 32;
+            _hopLength = 1;
             var transform = new MFCC(
                 sampleRate: _sampleRate,
                 window: WindowFunction.Hann,
@@ -61,12 +63,12 @@ namespace NeMoOnnxSharp
                 {
                     throw new InvalidDataException();
                 }
-                if (_featureBuffer.OutputCount >= _winLength)
+                while (_featureBuffer.OutputCount >= _featureBuffer.NumOutputChannels * _winLength)
                 {
                     var logits = _vad.Predict(_featureBuffer.OutputBuffer.AsSpan(0, _featureBuffer.NumOutputChannels * _winLength));
                     double x = Math.Exp(logits[0] - logits[1]);
                     result.Add((float)(1 / (x + 1)));
-                    _featureBuffer.ConsumeOutput(_featureBuffer.NumOutputChannels);
+                    _featureBuffer.ConsumeOutput(_featureBuffer.NumOutputChannels * _hopLength);
                 }
                 input = input[written..];
             }
