@@ -16,17 +16,17 @@ namespace NeMoOnnxSharp
     {
         private const string Vocabulary = " abcdefghijklmnopqrstuvwxyz'_";
 
-        private readonly IAudioPreprocessor<short, float> _processor;
+        private readonly IAudioPreprocessor<short, float> _preProcessor;
         private readonly CharTokenizer _tokenizer;
         private readonly InferenceSession _inferSess;
         private readonly int _features;
 
-        public IAudioPreprocessor<short, float> Processor => _processor;
+        public IAudioPreprocessor<short, float> PreProcessor => _preProcessor;
 
         private EncDecCTCModel(InferenceSession inferSess)
         {
             _features = 64;
-            _processor = new AudioToMelSpectrogramPreprocessor(
+            _preProcessor = new AudioToMelSpectrogramPreprocessor(
                 sampleRate: 16000,
                 window: WindowFunction.Hann,
                 windowSize: 0.02,
@@ -55,7 +55,7 @@ namespace NeMoOnnxSharp
         public override string Transcribe(Span<short> inputSignal)
         {
             string text = string.Empty;
-            var processedSignal = _processor.GetFeatures(inputSignal);
+            var processedSignal = _preProcessor.GetFeatures(inputSignal);
             processedSignal = TransposeInputSignal(processedSignal, _features);
             var container = new List<NamedOnnxValue>();
             var audioSignalData = new DenseTensor<float>(
