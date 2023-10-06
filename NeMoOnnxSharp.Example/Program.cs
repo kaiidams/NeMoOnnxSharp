@@ -161,13 +161,14 @@ namespace NeMoOnnxSharp.Example
                 audioSignal.AddRange(MemoryMarshal.Cast<byte, short>(responseBytes.AsSpan(0, bytesReceived)).ToArray());
                 var result = framevad.Transcribe(audioSignal.ToArray());
                 // Console.WriteLine("{0}", result.Length);
+                int p = l - framevad.Position;
                 foreach (var x in result)
                 {
                     z += x;
                     y++;
                     if (y >= 100)
                     {
-                        Console.WriteLine("vad: {0} {1} {2}", l / 16, bytesReceived / 2, z / y);
+                        Console.WriteLine("vad: {0} {1} {2} {3}", framevad.Position, p / 16, bytesReceived / 2, z / y);
                         y = 0;
                         z = 0;
                     }

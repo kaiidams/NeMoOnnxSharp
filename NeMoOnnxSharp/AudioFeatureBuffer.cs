@@ -27,7 +27,7 @@ namespace NeMoOnnxSharp
         public int WinLength => _winLength;
         public int OutputCount => _outputCount;
         public T2[] OutputBuffer => _outputBuffer;
-        public int OutputPosition => _outputCount * _hopLength + _inputCount;
+        public int OutputPosition => _outputCount / _numOutputChannels * _hopLength + _inputCount;
 
         public AudioFeatureBuffer(
             IFeaturizer<T1, T2> transform,

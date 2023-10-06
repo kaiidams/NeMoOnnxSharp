@@ -14,6 +14,8 @@ namespace NeMoOnnxSharp
         private readonly int _sampleRate;
         private readonly int _winLength;
         private readonly int _hopLength;
+        private int _predictPosition;
+        private float[] _predictWindow;
         private readonly AudioFeatureBuffer<short, float> _featureBuffer;
         private readonly EncDecClassificationModel _vad;
 
@@ -22,6 +24,8 @@ namespace NeMoOnnxSharp
             _sampleRate = 16000;
             _winLength = 32;
             _hopLength = 1;
+            _predictPosition = 0;
+            _predictWindow = new float[_winLength / _hopLength];
             var transform = new MFCC(
                 sampleRate: _sampleRate,
                 window: WindowFunction.Hann,
@@ -41,6 +45,14 @@ namespace NeMoOnnxSharp
         }
 
         public int SampleRate => _sampleRate;
+        public int Position {
+            get {
+                int outputTotalWindow = (_predictWindow.Length - 1) * _hopLength + _winLength;
+                int outputPosition = _featureBuffer.OutputPosition;
+                outputPosition += _featureBuffer.HopLength * (outputTotalWindow / 2 - _winLength);
+                return outputPosition - _featureBuffer.WinLength / 2;
+            }
+        }
 
         public void Dispose()
         {
@@ -54,7 +66,6 @@ namespace NeMoOnnxSharp
 
         public float[] Transcribe(Span<short> input)
         {
-            int outputPosition = _featureBuffer.OutputPosition;
             var result = new List<float>();
             while (input.Length > 0)
             {
@@ -67,7 +78,10 @@ namespace NeMoOnnxSharp
                 {
                     var logits = _vad.Predict(_featureBuffer.OutputBuffer.AsSpan(0, _featureBuffer.NumOutputChannels * _winLength));
                     double x = Math.Exp(logits[0] - logits[1]);
-                    result.Add((float)(1 / (x + 1)));
+
+                    _predictWindow[_predictPosition] = (float)(1 / (x + 1));
+                    _predictPosition = (_predictPosition + 1) % _predictWindow.Length;
+                    result.Add(_predictWindow.Average());
                     _featureBuffer.ConsumeOutput(_featureBuffer.NumOutputChannels * _hopLength);
                 }
                 input = input[written..];
