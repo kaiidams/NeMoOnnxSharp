@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Cryptography;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -220,68 +221,29 @@ namespace NeMoOnnxSharp.Example
 
         private static void RunFileStreamAudio(string basePath, string[] modelPaths)
         {
-            using var framevad = new FrameVAD(modelPaths[0]);
+            using var recognizer = new SpeechRecognizer(modelPaths[0]);
+            recognizer.OnSpeechStart = (long position) =>
+            {
+                double t = (double)position / recognizer.SampleRate;
+                Console.WriteLine("start {0}", t);
+            };
+            recognizer.OnSpeechEnd = (long position, short[] audio, string? transcript) =>
+            {
+                double t = (double)position / recognizer.SampleRate;
+                Console.WriteLine("end {0} {1} {2}", t, audio.Length, transcript);
+            };
             var stream = GetAllAudioStream(basePath);
-            int audioBufferSize = sizeof (short) * framevad.SampleRate * 2; // 2sec
-            int audioBufferIndex = 0;
-            int totalByteCount = 0;
-            byte[] audioBuffer = new byte[audioBufferSize];
-            double z = 0.0;
-            int y = 0;
-            bool isSpeech = false;
-
+            var buffer = new byte[1024];
             using var ostream = new FileStream(Path.Combine(basePath, "result.csv"), FileMode.Create);
             using var writer = new StreamWriter(ostream);
             while (true)
             {
-                if (audioBufferIndex >= audioBuffer.Length)
+                int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                if (bytesRead == 0)
                 {
-                    audioBufferIndex = 0;
+                    break;
                 }
-                int bytesReceived = stream.Read(audioBuffer, audioBufferIndex, audioBuffer.Length - audioBufferIndex);
-                if (bytesReceived == 0) break;
-                var audioSignal = MemoryMarshal.Cast<byte, short>(audioBuffer.AsSpan(audioBufferIndex, bytesReceived));
-                int transcribePosition = totalByteCount / sizeof (short) - framevad.Position;
-                var result = framevad.Transcribe(audioSignal);
-                foreach (var prob in result)
-                {
-                    writer.WriteLine("{0},{1}", transcribePosition, prob);
-                    if (isSpeech)
-                    {
-                        if (prob < 0.3)
-                        {
-                            isSpeech = false;
-                            double t = (double)transcribePosition / framevad.SampleRate;
-                            Console.WriteLine("off {0}", t);
-                        }
-                    }
-                    else
-                    {
-                        if (prob >= 0.7)
-                        {
-                            isSpeech = true;
-                            double t = (double)transcribePosition / framevad.SampleRate;
-                            Console.WriteLine("on  {0}", t);
-                        }
-                    }
-                    transcribePosition += 160;
-                }
-#if false
-                foreach (var x in result)
-                {
-                    z += x;
-                    y++;
-                    if (y >= 10)
-                    {
-                        double t = (double)transcribePosition / framevad.SampleRate;
-                        Console.WriteLine("vad: {0} {1}", t, z / y);
-                        y = 0;
-                        z = 0;
-                    }
-                }
-#endif
-                audioBufferIndex += bytesReceived;
-                totalByteCount += bytesReceived;
+                recognizer.Transcribe(buffer.AsSpan(0, bytesRead));
             }
         }
 
@@ -424,15 +386,26 @@ namespace NeMoOnnxSharp.Example
             string? line;
             var stream = new MemoryStream();
             stream.Write(new byte[32000]);
+            var rng = new Random();
             while ((line = reader.ReadLine()) != null)
             {
                 string[] parts = line.Split("|");
                 string name = parts[0];
                 string waveFile = Path.Combine(inputDirPath, name);
                 var waveform = WaveFile.ReadWAV(waveFile, 16000);
+                for (int i = 0; i < waveform.Length; i++)
+                {
+                    waveform[i] += (short)(rng.NextDouble() * 2000 - 1000);
+                }
                 var bytes = MemoryMarshal.Cast<short, byte>(waveform);
                 stream.Write(bytes);
-                stream.Write(new byte[32000]);
+                waveform = new short[16000];
+                for (int i = 0; i < waveform.Length; i++)
+                {
+                    waveform[i] = (short)(rng.NextDouble() * 2000 - 1000);
+                }
+                bytes = MemoryMarshal.Cast<short, byte>(waveform);
+                stream.Write(bytes);
             }
             stream.Seek(0, SeekOrigin.Begin);
             return stream;

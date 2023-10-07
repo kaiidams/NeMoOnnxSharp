@@ -12,20 +12,20 @@ namespace NeMoOnnxSharp
     public class FrameVAD : IDisposable
     {
         private readonly int _sampleRate;
-        private readonly int _winLength;
-        private readonly int _hopLength;
+        private readonly int _modelWinLength;
+        private readonly int _modelHopLength;
         private int _predictPosition;
         private float[] _predictWindow;
         private readonly AudioFeatureBuffer<short, float> _featureBuffer;
         private readonly EncDecClassificationModel _vad;
 
-        private FrameVAD(EncDecClassificationModel vad)
+        private FrameVAD(EncDecClassificationModel vad, int smoothingWinLength = 64)
         {
             _sampleRate = 16000;
-            _winLength = 32;
-            _hopLength = 1;
+            _modelWinLength = 32;
+            _modelHopLength = 1;
             _predictPosition = 0;
-            _predictWindow = new float[_winLength / _hopLength];
+            _predictWindow = new float[smoothingWinLength];
             var transform = new MFCC(
                 sampleRate: _sampleRate,
                 window: WindowFunction.Hann,
@@ -43,20 +43,23 @@ namespace NeMoOnnxSharp
                 hopLength: 160);
             _vad = vad;
         }
-        public FrameVAD(string modelPath) : this(new EncDecClassificationModel(modelPath))
+
+        public FrameVAD(string modelPath) : this(
+            new EncDecClassificationModel(modelPath))
         {
         }
 
-        public FrameVAD(byte[] model) : this(new EncDecClassificationModel(model))
+        public FrameVAD(byte[] model) : this(
+            new EncDecClassificationModel(model))
         {
         }
 
         public int SampleRate => _sampleRate;
         public int Position {
             get {
-                int outputTotalWindow = (_predictWindow.Length - 1) * _hopLength + _winLength;
+                int outputTotalWindow = (_predictWindow.Length - 1) * _modelHopLength + _modelWinLength;
                 int outputPosition = _featureBuffer.OutputPosition;
-                outputPosition += _featureBuffer.HopLength * (outputTotalWindow / 2 - _winLength);
+                outputPosition += _featureBuffer.HopLength * (outputTotalWindow / 2 - _modelWinLength);
                 return outputPosition - _featureBuffer.WinLength / 2;
             }
         }
@@ -81,15 +84,15 @@ namespace NeMoOnnxSharp
                 {
                     throw new InvalidDataException();
                 }
-                while (_featureBuffer.OutputCount >= _featureBuffer.NumOutputChannels * _winLength)
+                while (_featureBuffer.OutputCount >= _featureBuffer.NumOutputChannels * _modelWinLength)
                 {
-                    var logits = _vad.Predict(_featureBuffer.OutputBuffer.AsSpan(0, _featureBuffer.NumOutputChannels * _winLength));
+                    var logits = _vad.Predict(_featureBuffer.OutputBuffer.AsSpan(0, _featureBuffer.NumOutputChannels * _modelWinLength));
                     double x = Math.Exp(logits[0] - logits[1]);
 
                     _predictWindow[_predictPosition] = (float)(1 / (x + 1));
                     _predictPosition = (_predictPosition + 1) % _predictWindow.Length;
                     result.Add(_predictWindow.Average());
-                    _featureBuffer.ConsumeOutput(_featureBuffer.NumOutputChannels * _hopLength);
+                    _featureBuffer.ConsumeOutput(_featureBuffer.NumOutputChannels * _modelHopLength);
                 }
                 input = input[written..];
             }
