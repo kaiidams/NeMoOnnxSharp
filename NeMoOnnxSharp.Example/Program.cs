@@ -9,7 +9,6 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Diagnostics;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -20,7 +19,7 @@ namespace NeMoOnnxSharp.Example
         static async Task Main(string[] args)
         {
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string task = args.Length > 0 ? args[0] : "socketaudio";
+            string task = args.Length > 0 ? args[0] : "streamaudio";
 
             if (task == "transcribe")
             {
@@ -52,9 +51,18 @@ namespace NeMoOnnxSharp.Example
             {
                 var modelPaths = await DownloadModelsAsync(new string?[]
                 {
-                    "vad_marblenet", "stt_en_quartznet15x5"
+                    "vad_marblenet",
                 });
                 RunFileStreamAudio(basePath, modelPaths);
+                return;
+            }
+            else if (task == "streamaudio2")
+            {
+                var modelPaths = await DownloadModelsAsync(new string?[]
+                {
+                    "vad_marblenet", "stt_en_quartznet15x5"
+                });
+                RunFileStreamAudio2(basePath, modelPaths);
                 return;
             }
             else
@@ -139,8 +147,7 @@ namespace NeMoOnnxSharp.Example
 
         private static void RunSocketAudio(string modelPath)
         {
-            using var vad = new EncDecClassificationModel(modelPath);
-            using var framevad = new FrameVAD(vad);
+             using var framevad = new FrameVAD(modelPath);
             using Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
             socket.Connect("127.0.0.1", 17843);
             Console.WriteLine("Connected");
@@ -212,6 +219,73 @@ namespace NeMoOnnxSharp.Example
         }
 
         private static void RunFileStreamAudio(string basePath, string[] modelPaths)
+        {
+            using var framevad = new FrameVAD(modelPaths[0]);
+            var stream = GetAllAudioStream(basePath);
+            int audioBufferSize = sizeof (short) * framevad.SampleRate * 2; // 2sec
+            int audioBufferIndex = 0;
+            int totalByteCount = 0;
+            byte[] audioBuffer = new byte[audioBufferSize];
+            double z = 0.0;
+            int y = 0;
+            bool isSpeech = false;
+
+            using var ostream = new FileStream(Path.Combine(basePath, "result.csv"), FileMode.Create);
+            using var writer = new StreamWriter(ostream);
+            while (true)
+            {
+                if (audioBufferIndex >= audioBuffer.Length)
+                {
+                    audioBufferIndex = 0;
+                }
+                int bytesReceived = stream.Read(audioBuffer, audioBufferIndex, audioBuffer.Length - audioBufferIndex);
+                if (bytesReceived == 0) break;
+                var audioSignal = MemoryMarshal.Cast<byte, short>(audioBuffer.AsSpan(audioBufferIndex, bytesReceived));
+                int transcribePosition = totalByteCount / sizeof (short) - framevad.Position;
+                var result = framevad.Transcribe(audioSignal);
+                foreach (var prob in result)
+                {
+                    writer.WriteLine("{0},{1}", transcribePosition, prob);
+                    if (isSpeech)
+                    {
+                        if (prob < 0.3)
+                        {
+                            isSpeech = false;
+                            double t = (double)transcribePosition / framevad.SampleRate;
+                            Console.WriteLine("off {0}", t);
+                        }
+                    }
+                    else
+                    {
+                        if (prob >= 0.7)
+                        {
+                            isSpeech = true;
+                            double t = (double)transcribePosition / framevad.SampleRate;
+                            Console.WriteLine("on  {0}", t);
+                        }
+                    }
+                    transcribePosition += 160;
+                }
+#if false
+                foreach (var x in result)
+                {
+                    z += x;
+                    y++;
+                    if (y >= 10)
+                    {
+                        double t = (double)transcribePosition / framevad.SampleRate;
+                        Console.WriteLine("vad: {0} {1}", t, z / y);
+                        y = 0;
+                        z = 0;
+                    }
+                }
+#endif
+                audioBufferIndex += bytesReceived;
+                totalByteCount += bytesReceived;
+            }
+        }
+
+        private static void RunFileStreamAudio2(string basePath, string[] modelPaths)
         {
             var stream = GetAllAudioStream(basePath);
             int sampleRate = 16000;
