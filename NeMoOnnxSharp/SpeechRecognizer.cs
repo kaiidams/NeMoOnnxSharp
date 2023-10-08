@@ -120,7 +120,9 @@ namespace NeMoOnnxSharp
                     {
                         _isSpeech = true;
                         if (OnSpeechStart != null) OnSpeechStart(_currentPosition + pos);
-                        _ChangeAudioBufferForSpeech(pos, audioSignal);
+                        int audioSignalLength2 = audioSignal.Length * sizeof (short);
+                        int pos2 = pos * sizeof(short);
+                        _ChangeAudioBufferForSpeech(pos2, audioSignalLength2);
                     }
                 }
                 pos += 160;
@@ -134,40 +136,40 @@ namespace NeMoOnnxSharp
             _audioBuffer = new byte[_audioBufferSize];
         }
 
-        private void _ChangeAudioBufferForSpeech(int pos, Span<short> audioSignal)
+        private void _ChangeAudioBufferForSpeech(int pos2, int audioSignalLength2)
         {
-            if (_audioBufferIndex + sizeof(short) * pos >= 0)
+            if (_audioBufferIndex + pos2 >= 0)
             {
                 Array.Copy(
-                    _audioBuffer, _audioBufferIndex + sizeof(short) * pos,
+                    _audioBuffer, _audioBufferIndex + pos2,
                     _audioBuffer, 0,
-                    -sizeof(short) * (pos + audioSignal.Length));
-                _audioBufferIndex = -sizeof(short) * (pos + audioSignal.Length);
+                    -(pos2 + audioSignalLength2));
+                _audioBufferIndex = -(pos2 + audioSignalLength2);
             }
-            else if (_audioBufferIndex + sizeof(short) * pos + _audioBuffer.Length >= _audioBufferIndex + sizeof(short) * audioSignal.Length)
+            else if (_audioBufferIndex + pos2 + _audioBuffer.Length >= _audioBufferIndex + audioSignalLength2)
             {
                 var tmp = new byte[_audioBuffer.Length + _AudioBufferIncrease];
                 Array.Copy(
-                    _audioBuffer, _audioBufferIndex + sizeof(short) * pos + _audioBuffer.Length,
+                    _audioBuffer, _audioBufferIndex + pos2 + _audioBuffer.Length,
                     tmp, 0,
-                    -(_audioBufferIndex + sizeof(short) * pos));
+                    -(_audioBufferIndex + pos2));
                 Array.Copy(
                     _audioBuffer, 0,
-                    tmp, -(_audioBufferIndex + sizeof(short) * pos),
-                    _audioBufferIndex + sizeof(short) * audioSignal.Length);
-                _audioBufferIndex = _audioBufferIndex + audioSignal.Length;
+                    tmp, -(_audioBufferIndex + pos2),
+                    _audioBufferIndex + audioSignalLength2);
+                _audioBufferIndex = _audioBufferIndex + audioSignalLength2;
             }
             else
             {
                 var tmp = new byte[_audioBuffer.Length + _AudioBufferIncrease];
                 Array.Copy(
-                    _audioBuffer, _audioBufferIndex + sizeof(short) * audioSignal.Length,
+                    _audioBuffer, _audioBufferIndex + audioSignalLength2,
                     tmp, 0,
-                    _audioBuffer.Length - (_audioBufferIndex + sizeof(short) * audioSignal.Length));
+                    _audioBuffer.Length - (_audioBufferIndex + audioSignalLength2));
                 Array.Copy(
                     _audioBuffer, 0,
-                    tmp, _audioBuffer.Length - (_audioBufferIndex + sizeof(short) * audioSignal.Length),
-                    _audioBufferIndex + audioSignal.Length);
+                    tmp, _audioBuffer.Length - (_audioBufferIndex + audioSignalLength2),
+                    _audioBufferIndex + audioSignalLength2);
                 _audioBufferIndex = _audioBuffer.Length;
             }
         }
