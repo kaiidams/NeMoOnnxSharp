@@ -222,6 +222,10 @@ namespace NeMoOnnxSharp.Example
         private static void RunFileStreamAudio(string basePath, string[] modelPaths)
         {
             using var recognizer = new SpeechRecognizer(modelPaths[0], modelPaths[1]);
+            string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
+            using var ostream = new FileStream(Path.Combine(inputDirPath, "result.txt"), FileMode.Create);
+            using var writer = new StreamWriter(ostream);
+            int index = 0;
             recognizer.OnSpeechStart = (long position) =>
             {
                 double t = (double)position / recognizer.SampleRate;
@@ -231,11 +235,13 @@ namespace NeMoOnnxSharp.Example
             {
                 double t = (double)position / recognizer.SampleRate;
                 Console.WriteLine("end {0} {1} {2}", t, audio.Length, transcript);
+                string fileName = string.Format("recognized-{0}.wav", index);
+                writer.WriteLine("{0}|{1}|{2}", fileName, audio.Length, transcript);
+                WaveFile.WriteWAV(Path.Combine(inputDirPath, fileName), audio, recognizer.SampleRate);
+                index += 1;
             };
             var stream = GetAllAudioStream(basePath);
             var buffer = new byte[1024];
-            using var ostream = new FileStream(Path.Combine(basePath, "result.csv"), FileMode.Create);
-            using var writer = new StreamWriter(ostream);
             while (true)
             {
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
