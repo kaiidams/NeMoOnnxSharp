@@ -52,7 +52,7 @@ namespace NeMoOnnxSharp.Example
             {
                 var modelPaths = await DownloadModelsAsync(new string?[]
                 {
-                    "vad_marblenet",
+                    "vad_marblenet", "stt_en_quartznet15x5"
                 });
                 RunFileStreamAudio(basePath, modelPaths);
                 return;
@@ -221,7 +221,7 @@ namespace NeMoOnnxSharp.Example
 
         private static void RunFileStreamAudio(string basePath, string[] modelPaths)
         {
-            using var recognizer = new SpeechRecognizer(modelPaths[0]);
+            using var recognizer = new SpeechRecognizer(modelPaths[0], modelPaths[1]);
             recognizer.OnSpeechStart = (long position) =>
             {
                 double t = (double)position / recognizer.SampleRate;

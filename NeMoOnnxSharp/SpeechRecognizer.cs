@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -17,15 +18,17 @@ namespace NeMoOnnxSharp
         public delegate void SpeechEnd(long position, short[] audioSignal, string? transcript);
 
         private readonly FrameVAD _frameVad;
+        private readonly EncDecCTCModel _asrModel;
         int _audioBufferSize;
         int _audioBufferIndex;
         long _currentPosition;
         byte[] _audioBuffer;
         bool _isSpeech;
 
-        private SpeechRecognizer(FrameVAD frameVad)
+        private SpeechRecognizer(FrameVAD frameVad, EncDecCTCModel asrModel)
         {
             _frameVad = frameVad;
+            _asrModel = asrModel;
             _currentPosition = 0;
             _audioBufferSize = sizeof(short) * _frameVad.SampleRate * 2; // 2sec
             _audioBufferIndex = 0;
@@ -35,13 +38,13 @@ namespace NeMoOnnxSharp
             OnSpeechStart = null;
         }
 
-        public SpeechRecognizer(string modelPath) : this(
-            new FrameVAD(modelPath))
+        public SpeechRecognizer(string vadModelPath, string asrModelPath) : this(
+            new FrameVAD(vadModelPath), new EncDecCTCModel(asrModelPath))
         {
         }
 
-        public SpeechRecognizer(byte[] model) : this(
-            new FrameVAD(model))
+        public SpeechRecognizer(byte[] vadModel, byte[] asrModel) : this(
+            new FrameVAD(vadModel), new EncDecCTCModel(asrModel))
         {
         }
 
@@ -86,6 +89,7 @@ namespace NeMoOnnxSharp
                 len = (len / sizeof(short)) * sizeof(short);
                 var audioSignal = MemoryMarshal.Cast<byte, short>(_audioBuffer.AsSpan(_audioBufferIndex, len));
                 _Transcribe(audioSignal);
+                _audioBufferIndex += len;
             }
         }
 
@@ -104,7 +108,8 @@ namespace NeMoOnnxSharp
                         {
                             var audio = _audioBuffer.AsSpan(0, _audioBufferIndex + sizeof(short) * audioSignal.Length);
                             var x = MemoryMarshal.Cast<byte, short>(audio).ToArray();
-                            OnSpeechEnd(_currentPosition + pos, x, null);
+                            string predictText = _asrModel.Transcribe(x);
+                            OnSpeechEnd(_currentPosition + pos, x, predictText);
                         }
                         _ResetAudioBuffer();
                     }
