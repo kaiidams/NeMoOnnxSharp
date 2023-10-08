@@ -54,6 +54,8 @@ namespace NeMoOnnxSharp
         {
         }
 
+        public int HopLength => _featureBuffer.HopLength * _modelHopLength;
+
         public int SampleRate => _sampleRate;
         public int Position {
             get {

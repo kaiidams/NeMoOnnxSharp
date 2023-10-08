@@ -91,8 +91,8 @@ namespace NeMoOnnxSharp
                 }
                 input.Slice(0, len).CopyTo(_audioBuffer.AsSpan(_audioBufferIndex, len));
                 input = input.Slice(len);
-                len = (len / sizeof(short)) * sizeof(short);
-                var audioSignal = MemoryMarshal.Cast<byte, short>(_audioBuffer.AsSpan(_audioBufferIndex, len));
+                int len2 = (len / sizeof(short)) * sizeof(short);
+                var audioSignal = MemoryMarshal.Cast<byte, short>(_audioBuffer.AsSpan(_audioBufferIndex, len2));
                 _audioBufferIndex += len;
                 _currentPosition += audioSignal.Length;
                 _Transcribe(audioSignal);
@@ -110,15 +110,15 @@ namespace NeMoOnnxSharp
                     if (prob < _speechEndThreadhold)
                     {
                         _isSpeech = false;
-                        int pos2 = pos * sizeof(short);
+                        int posBytes = pos * sizeof(short);
                         if (OnSpeechEnd != null)
                         {
-                            var audio = _audioBuffer.AsSpan(0, _audioBufferIndex + pos2);
+                            var audio = _audioBuffer.AsSpan(0, _audioBufferIndex + posBytes);
                             var x = MemoryMarshal.Cast<byte, short>(audio).ToArray();
                             string predictText = _asrModel.Transcribe(x);
                             OnSpeechEnd(_currentPosition + pos, x, predictText);
                         }
-                        _ResetAudioBuffer(pos2);
+                        _ResetAudioBuffer(posBytes);
                     }
                 }
                 else
@@ -131,24 +131,24 @@ namespace NeMoOnnxSharp
                         _ChangeAudioBufferForSpeech(pos2);
                     }
                 }
-                pos += 160;
+                pos += _frameVad.HopLength;
             }
         }
 
-        private void _ResetAudioBuffer(int pos2)
+        private void _ResetAudioBuffer(int posBytes)
         {
             var tmp = new byte[_audioBufferSize];
             Array.Copy(
-                _audioBuffer, _audioBufferIndex + pos2,
+                _audioBuffer, _audioBufferIndex + posBytes,
                 tmp, 0,
-                -pos2);
+                -posBytes);
             _audioBuffer = tmp;
-            _audioBufferIndex = -pos2;
+            _audioBufferIndex = -posBytes;
         }
 
-        private void _ChangeAudioBufferForSpeech(int pos2)
+        private void _ChangeAudioBufferForSpeech(int posBytes)
         {
-            int audioBufferStart = _audioBufferIndex + pos2;
+            int audioBufferStart = _audioBufferIndex + posBytes;
             int audioBufferEnd = _audioBufferIndex;
             if (audioBufferStart >= 0)
             {
