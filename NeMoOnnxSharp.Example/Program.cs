@@ -401,14 +401,14 @@ namespace NeMoOnnxSharp.Example
                 var waveform = WaveFile.ReadWAV(waveFile, 16000);
                 for (int i = 0; i < waveform.Length; i++)
                 {
-                    waveform[i] += (short)(rng.NextDouble() * 2000 - 1000);
+                    //waveform[i] += (short)(rng.NextDouble() * 2000 - 1000);
                 }
                 var bytes = MemoryMarshal.Cast<short, byte>(waveform);
                 stream.Write(bytes);
                 waveform = new short[16000];
                 for (int i = 0; i < waveform.Length; i++)
                 {
-                    waveform[i] = (short)(rng.NextDouble() * 2000 - 1000);
+                    //waveform[i] = (short)(rng.NextDouble() * 2000 - 1000);
                 }
                 bytes = MemoryMarshal.Cast<short, byte>(waveform);
                 stream.Write(bytes);

@@ -13,29 +13,34 @@ namespace NeMoOnnxSharp
 {
     public class SpeechRecognizer : IDisposable
     {
-        private int _AudioBufferIncrease = 5 * 16000;
         public delegate void SpeechStart(long position);
         public delegate void SpeechEnd(long position, short[] audioSignal, string? transcript);
 
         private readonly FrameVAD _frameVad;
         private readonly EncDecCTCModel _asrModel;
-        int _audioBufferSize;
+        private readonly int _audioBufferIncrease;
+        private readonly int _audioBufferSize;
         int _audioBufferIndex;
         long _currentPosition;
         byte[] _audioBuffer;
         bool _isSpeech;
+        private readonly float _speechStartThreadhold;
+        private readonly float _speechEndThreadhold;
 
         private SpeechRecognizer(FrameVAD frameVad, EncDecCTCModel asrModel)
         {
             _frameVad = frameVad;
             _asrModel = asrModel;
             _currentPosition = 0;
-            _audioBufferSize = sizeof(short) * _frameVad.SampleRate * 2; // 2sec
             _audioBufferIndex = 0;
+            _audioBufferSize = sizeof(short) * _frameVad.SampleRate * 2; // 2sec
+            _audioBufferIncrease = sizeof(short) * 5 * _frameVad.SampleRate; // 10sec
             _audioBuffer = new byte[_audioBufferSize];
             _isSpeech = false;
             OnSpeechEnd = null;
             OnSpeechStart = null;
+            _speechStartThreadhold = 0.7f;
+            _speechEndThreadhold = 0.3f;
         }
 
         public SpeechRecognizer(string vadModelPath, string asrModelPath) : this(
@@ -71,7 +76,7 @@ namespace NeMoOnnxSharp
                 {
                     if (len > _audioBuffer.Length - _audioBufferIndex)
                     {
-                        var tmp = new byte[_audioBuffer.Length + _AudioBufferIncrease];
+                        var tmp = new byte[_audioBuffer.Length + _audioBufferIncrease];
                         Array.Copy(_audioBuffer, tmp, _audioBufferIndex);
                         _audioBuffer = tmp;
                     }
@@ -88,88 +93,97 @@ namespace NeMoOnnxSharp
                 input = input.Slice(len);
                 len = (len / sizeof(short)) * sizeof(short);
                 var audioSignal = MemoryMarshal.Cast<byte, short>(_audioBuffer.AsSpan(_audioBufferIndex, len));
-                _Transcribe(audioSignal);
                 _audioBufferIndex += len;
+                _currentPosition += audioSignal.Length;
+                _Transcribe(audioSignal);
             }
         }
 
         private void _Transcribe(Span<short> audioSignal)
         {
-            var pos = -_frameVad.Position;
+            var pos = -(audioSignal.Length + _frameVad.Position);
             var result = _frameVad.Transcribe(audioSignal);
             foreach (var prob in result)
             {
                 if (_isSpeech)
                 {
-                    if (prob < 0.3)
+                    if (prob < _speechEndThreadhold)
                     {
                         _isSpeech = false;
+                        int pos2 = pos * sizeof(short);
                         if (OnSpeechEnd != null)
                         {
-                            var audio = _audioBuffer.AsSpan(0, _audioBufferIndex + sizeof(short) * audioSignal.Length);
+                            var audio = _audioBuffer.AsSpan(0, _audioBufferIndex + pos2);
                             var x = MemoryMarshal.Cast<byte, short>(audio).ToArray();
                             string predictText = _asrModel.Transcribe(x);
                             OnSpeechEnd(_currentPosition + pos, x, predictText);
                         }
-                        _ResetAudioBuffer();
+                        _ResetAudioBuffer(pos2);
                     }
                 }
                 else
                 {
-                    if (prob >= 0.7)
+                    if (prob >= _speechStartThreadhold)
                     {
                         _isSpeech = true;
                         if (OnSpeechStart != null) OnSpeechStart(_currentPosition + pos);
-                        int audioSignalLength2 = audioSignal.Length * sizeof (short);
                         int pos2 = pos * sizeof(short);
-                        _ChangeAudioBufferForSpeech(pos2, audioSignalLength2);
+                        _ChangeAudioBufferForSpeech(pos2);
                     }
                 }
                 pos += 160;
             }
-            _currentPosition += audioSignal.Length;
         }
 
-        private void _ResetAudioBuffer()
+        private void _ResetAudioBuffer(int pos2)
         {
-            _audioBufferIndex = 0;
-            _audioBuffer = new byte[_audioBufferSize];
+            var tmp = new byte[_audioBufferSize];
+            Array.Copy(
+                _audioBuffer, _audioBufferIndex + pos2,
+                tmp, 0,
+                -pos2);
+            _audioBuffer = tmp;
+            _audioBufferIndex = -pos2;
         }
 
-        private void _ChangeAudioBufferForSpeech(int pos2, int audioSignalLength2)
+        private void _ChangeAudioBufferForSpeech(int pos2)
         {
-            if (_audioBufferIndex + pos2 >= 0)
+            int audioBufferStart = _audioBufferIndex + pos2;
+            int audioBufferEnd = _audioBufferIndex;
+            if (audioBufferStart >= 0)
             {
                 Array.Copy(
-                    _audioBuffer, _audioBufferIndex + pos2,
+                    _audioBuffer, audioBufferStart,
                     _audioBuffer, 0,
-                    -(pos2 + audioSignalLength2));
-                _audioBufferIndex = -(pos2 + audioSignalLength2);
+                    audioBufferEnd - audioBufferStart);
+                _audioBufferIndex = audioBufferEnd - audioBufferStart;
             }
-            else if (_audioBufferIndex + pos2 + _audioBuffer.Length >= _audioBufferIndex + audioSignalLength2)
+            else if (audioBufferStart + _audioBuffer.Length >= audioBufferEnd)
             {
-                var tmp = new byte[_audioBuffer.Length + _AudioBufferIncrease];
+                var tmp = new byte[_audioBuffer.Length + _audioBufferIncrease];
                 Array.Copy(
-                    _audioBuffer, _audioBufferIndex + pos2 + _audioBuffer.Length,
+                    _audioBuffer, audioBufferStart + _audioBuffer.Length,
                     tmp, 0,
-                    -(_audioBufferIndex + pos2));
+                    -audioBufferStart);
                 Array.Copy(
                     _audioBuffer, 0,
-                    tmp, -(_audioBufferIndex + pos2),
-                    _audioBufferIndex + audioSignalLength2);
-                _audioBufferIndex = _audioBufferIndex + audioSignalLength2;
+                    tmp, -audioBufferStart,
+                    audioBufferEnd);
+                _audioBuffer = tmp;
+                _audioBufferIndex = audioBufferEnd - audioBufferStart;
             }
             else
             {
-                var tmp = new byte[_audioBuffer.Length + _AudioBufferIncrease];
+                var tmp = new byte[_audioBuffer.Length + _audioBufferIncrease];
                 Array.Copy(
-                    _audioBuffer, _audioBufferIndex + audioSignalLength2,
+                    _audioBuffer, audioBufferEnd,
                     tmp, 0,
-                    _audioBuffer.Length - (_audioBufferIndex + audioSignalLength2));
+                    _audioBuffer.Length - audioBufferEnd);
                 Array.Copy(
                     _audioBuffer, 0,
-                    tmp, _audioBuffer.Length - (_audioBufferIndex + audioSignalLength2),
-                    _audioBufferIndex + audioSignalLength2);
+                    tmp, _audioBuffer.Length - audioBufferEnd,
+                    audioBufferEnd);
+                _audioBuffer = tmp;
                 _audioBufferIndex = _audioBuffer.Length;
             }
         }
