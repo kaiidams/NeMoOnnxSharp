@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Security.Cryptography;
 
 namespace NeMoOnnxSharp.Example
 {
