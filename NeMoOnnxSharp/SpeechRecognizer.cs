@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace NeMoOnnxSharp
 {
@@ -37,8 +36,6 @@ namespace NeMoOnnxSharp
             _audioBufferIncrease = sizeof(short) * 5 * _frameVad.SampleRate; // 10sec
             _audioBuffer = new byte[_audioBufferSize];
             _isSpeech = false;
-            OnSpeechEnd = null;
-            OnSpeechStart = null;
             _speechStartThreadhold = 0.7f;
             _speechEndThreadhold = 0.3f;
         }
@@ -54,8 +51,9 @@ namespace NeMoOnnxSharp
         }
 
         public int SampleRate => _frameVad.SampleRate;
-        public SpeechEnd? OnSpeechEnd { get; set; }
-        public SpeechStart? OnSpeechStart { get; set; }
+        public event EventHandler<SpeechRecognitionEventArgs>? Recognized;
+        public event EventHandler<SpeechRecognitionEventArgs>? SpeechStartDetected;
+        public event EventHandler<SpeechRecognitionEventArgs>? SpeechEndDetected;
 
         public void Dispose()
         {
@@ -111,12 +109,18 @@ namespace NeMoOnnxSharp
                     {
                         _isSpeech = false;
                         int posBytes = pos * sizeof(short);
-                        if (OnSpeechEnd != null)
+                        if (Recognized != null)
                         {
                             var audio = _audioBuffer.AsSpan(0, _audioBufferIndex + posBytes);
                             var x = MemoryMarshal.Cast<byte, short>(audio).ToArray();
                             string predictText = _asrModel.Transcribe(x);
-                            OnSpeechEnd(_currentPosition + pos, x, predictText);
+                            Recognized(this, new SpeechRecognitionEventArgs(
+                                (ulong)(_currentPosition + pos), predictText, x));
+                        }
+                        if (SpeechEndDetected != null)
+                        {
+                            SpeechEndDetected(this, new SpeechRecognitionEventArgs(
+                                (ulong)(_currentPosition + pos)));
                         }
                         _ResetAudioBuffer(posBytes);
                     }
@@ -126,7 +130,10 @@ namespace NeMoOnnxSharp
                     if (prob >= _speechStartThreadhold)
                     {
                         _isSpeech = true;
-                        if (OnSpeechStart != null) OnSpeechStart(_currentPosition + pos);
+                        if (SpeechStartDetected != null) {
+                            SpeechStartDetected(this, new SpeechRecognitionEventArgs(
+                                (ulong)(_currentPosition + pos)));
+                        }
                         int pos2 = pos * sizeof(short);
                         _ChangeAudioBufferForSpeech(pos2);
                     }

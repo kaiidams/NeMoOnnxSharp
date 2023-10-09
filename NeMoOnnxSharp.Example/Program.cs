@@ -20,7 +20,7 @@ namespace NeMoOnnxSharp.Example
         static async Task Main(string[] args)
         {
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string task = args.Length > 0 ? args[0] : "streamaudio";
+            string task = args.Length > 0 ? args[0] : "socketaudio";
 
             if (task == "transcribe")
             {
@@ -44,8 +44,11 @@ namespace NeMoOnnxSharp.Example
             }
             else if (task == "socketaudio")
             {
-                string modelPath = await DownloadModelAsync("vad_marblenet");
-                RunSocketAudio(modelPath);
+                var modelPaths = await DownloadModelsAsync(new string?[]
+                {
+                    "vad_marblenet", "stt_en_quartznet15x5"
+                });
+                RunSocketAudio(modelPaths);
                 return;
             }
             else if (task == "streamaudio")
@@ -55,15 +58,6 @@ namespace NeMoOnnxSharp.Example
                     "vad_marblenet", "stt_en_quartznet15x5"
                 });
                 RunFileStreamAudio(basePath, modelPaths);
-                return;
-            }
-            else if (task == "streamaudio2")
-            {
-                var modelPaths = await DownloadModelsAsync(new string?[]
-                {
-                    "vad_marblenet", "stt_en_quartznet15x5"
-                });
-                RunFileStreamAudio2(basePath, modelPaths);
                 return;
             }
             else
@@ -146,43 +140,36 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
-        private static void RunSocketAudio(string modelPath)
+        private static void RunSocketAudio(string[] modelPaths)
         {
-             using var framevad = new FrameVAD(modelPath);
+            using var recognizer = new SpeechRecognizer(modelPaths[0], modelPaths[1]);
             using Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
             socket.Connect("127.0.0.1", 17843);
             Console.WriteLine("Connected");
-            byte[] responseBytes = new byte[1024];
-            var audioSignal = new List<short>();
-            double z = 0.0;
-            int y = 0;
-            int l = 0;
+            recognizer.SpeechStartDetected += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("SpeechStartDetected {0}", t);
+            };
+            recognizer.SpeechEndDetected += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("SpeechEndDetected {0}", t);
+            };
+            recognizer.Recognized += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("Recognized {0} {1} {2}", t, e.Audio?.Length, e.Text);
+            };
+            var buffer = new byte[1024];
             while (true)
             {
-                int bytesReceived = socket.Receive(responseBytes);
-                if (bytesReceived == 0) break;
-                if (bytesReceived % 2 != 0)
+                int bytesRead = socket.Receive(buffer);
+                if (bytesRead == 0)
                 {
-                    // TODO
-                    throw new InvalidDataException();
+                    break;
                 }
-                audioSignal.AddRange(MemoryMarshal.Cast<byte, short>(responseBytes.AsSpan(0, bytesReceived)).ToArray());
-                var result = framevad.Transcribe(audioSignal.ToArray());
-                // Console.WriteLine("{0}", result.Length);
-                int p = l - framevad.Position;
-                foreach (var x in result)
-                {
-                    z += x;
-                    y++;
-                    if (y >= 100)
-                    {
-                        Console.WriteLine("vad: {0} {1} {2} {3}", framevad.Position, p / 16, bytesReceived / 2, z / y);
-                        y = 0;
-                        z = 0;
-                    }
-                }
-                l += bytesReceived / 2;
-                audioSignal.Clear();
+                recognizer.Transcribe(buffer.AsSpan(0, bytesRead));
             }
         }
 
@@ -226,162 +213,39 @@ namespace NeMoOnnxSharp.Example
             using var ostream = new FileStream(Path.Combine(inputDirPath, "result.txt"), FileMode.Create);
             using var writer = new StreamWriter(ostream);
             int index = 0;
-            recognizer.OnSpeechStart = (long position) =>
+            recognizer.SpeechStartDetected += (s, e) =>
             {
-                double t = (double)position / recognizer.SampleRate;
-                Console.WriteLine("start {0}", t);
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("SpeechStartDetected {0}", t);
             };
-            recognizer.OnSpeechEnd = (long position, short[] audio, string? transcript) =>
+            recognizer.SpeechEndDetected += (s, e) =>
             {
-                double t = (double)position / recognizer.SampleRate;
-                Console.WriteLine("end {0} {1} {2}", t, audio.Length, transcript);
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("SpeechEndDetected {0}", t);
+            };
+            recognizer.Recognized += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("Recognized {0} {1} {2}", t, e.Audio?.Length, e.Text);
                 string fileName = string.Format("recognized-{0}.wav", index);
-                writer.WriteLine("{0}|{1}|{2}", fileName, audio.Length, transcript);
-                WaveFile.WriteWAV(Path.Combine(inputDirPath, fileName), audio, recognizer.SampleRate);
+                writer.WriteLine("{0}|{1}|{2}", fileName, e.Audio?.Length, e.Text);
+                if (e.Audio != null)
+                {
+                    WaveFile.WriteWAV(Path.Combine(inputDirPath, fileName), e.Audio, recognizer.SampleRate);
+                }
                 index += 1;
             };
             var stream = GetAllAudioStream(basePath);
             var buffer = new byte[1024];
             while (true)
             {
-                int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                int bytesRead = stream.Read(buffer);
                 if (bytesRead == 0)
                 {
                     break;
                 }
                 recognizer.Transcribe(buffer.AsSpan(0, bytesRead));
             }
-        }
-
-        private static void RunFileStreamAudio2(string basePath, string[] modelPaths)
-        {
-            var stream = GetAllAudioStream(basePath);
-            int sampleRate = 16000;
-            var transform = new MFCC(
-                sampleRate: sampleRate,
-                window: WindowFunction.Hann,
-                winLength: 400,
-                nFFT: 512,
-                nMels: 64,
-                nMFCC: 64,
-                fMin: 0.0,
-                fMax: null,
-                logMels: true,
-                melScale: MelScale.HTK,
-                melNorm: MelNorm.None);
-            var buffer = new AudioFeatureBuffer<short, float>(
-                transform,
-                hopLength: 160);
-            using var recognizer = new EncDecCTCModel(modelPaths[1]);
-            using var vad = new EncDecClassificationModel(modelPaths[0]);
-            byte[] responseBytes = new byte[1024];
-            int count = 0;
-            int vadWinLength = (int)(sampleRate * 0.31 / buffer.HopLength * buffer.NumOutputChannels);
-            int vadHopLength = (int)(sampleRate * 0.01 / buffer.HopLength * buffer.NumOutputChannels);
-            int scoresLength = vadWinLength / vadHopLength;
-            int scoresIndex = 0;
-            var sw = new Stopwatch();
-            sw.Reset();
-            sw.Start();
-            var scores = new double[scoresLength];
-            double scoreSum = 0.0;
-            string displayChars = ".-=*#";
-            double recordStartThreshold = 0.75;
-            double recordEndThreshold = 0.25;
-            bool recording = false;
-            int recordStartShift = 100 * 16; // # 100ms delay
-            int recordEndPad = 5; // # 50ms
-            int repeatCount = 0;
-            int recordedAudioIndex = 0;
-            var recordedAudio = new List<short>();
-            int recordedIndex = 0;
-            using var scoreStream = File.OpenWrite("score.dat");
-            while (true)
-            {
-                int bytesReceived = stream.Read(responseBytes);
-                if (bytesReceived == 0) break;
-                if (bytesReceived % 2 != 0)
-                {
-                    // TODO
-                    throw new InvalidDataException();
-                }
-
-                var audioSignal = MemoryMarshal.Cast<byte, short>(responseBytes.AsSpan(0, bytesReceived));
-                recordedAudio.AddRange(audioSignal.ToArray());
-                for (int offset = 0; offset < audioSignal.Length;)
-                {
-                    int written = buffer.Write(audioSignal.Slice(offset, audioSignal.Length - offset));
-                    offset += written;
-                    while (buffer.OutputCount >= vadWinLength)
-                    {
-                        var x = buffer.OutputBuffer.AsSpan(0, vadWinLength);
-                        var logits = vad.Predict(x);
-                        double score = 1.0 / (1.0 + Math.Exp(logits[0] - logits[1]));
-                        scoreSum += score - scores[scoresIndex];
-                        scores[scoresIndex] = score;
-                        scoresIndex++;
-                        if (scoresIndex >= scoresLength) scoresIndex = 0;
-                        score = scoreSum / scoresLength;
-                        scoreStream.Write(new byte[1] { (byte)(score * 255) });
-                        char recordingChar = ' ';
-                        recordedAudioIndex += buffer.HopLength;
-                        if (!recording)
-                        {
-                            if (score >= recordStartThreshold)
-                            {
-                                recording = true;
-                                recordingChar = '[';
-                                repeatCount = 0;
-                                if (recordedAudioIndex + recordStartShift > 0)
-                                {
-                                    recordedAudio.RemoveRange(0, recordedAudioIndex + recordStartShift);
-                                    recordedAudioIndex = -recordStartShift;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            repeatCount = score < recordEndThreshold ? repeatCount + 1 : 0;
-                            if (repeatCount > recordEndPad)
-                            {
-                                recording = false;
-                                recordingChar = ']';
-                                WaveFile.WriteWAV(
-                                    string.Format("recorded-{0:0000}.wav", recordedIndex),
-                                    recordedAudio.ToArray(),
-                                    16000);
-                                recordedIndex++;
-                                string text = recognizer.Transcribe(recordedAudio.ToArray());
-                                Console.WriteLine();
-                                Console.WriteLine("text: {0}", text);
-                                //recordedAudio.Clear();
-                                //recordedAudioIndex = 0;
-                            }
-                        }
-
-                        if (recordingChar != ' ')
-                        {
-                            Console.Write(recordingChar);
-                        }
-                        else
-                        {
-                            Console.Write(displayChars[(int)(score * displayChars.Length)]);
-                        }
-                        ++count;
-                        if (count % 50 == 0)
-                        {
-                            count = 0;
-                            Console.WriteLine();
-                        }
-                        buffer.ConsumeOutput(vadHopLength);
-                    }
-                }
-            }
-            sw.Stop();
-            Console.WriteLine();
-            double audioTime = (double)(stream.Position / 2) / sampleRate;
-            double clockTime = sw.ElapsedMilliseconds / 1000.0;
-            Console.WriteLine("{0} sec audio processed in {1} sec", audioTime, clockTime);
         }
 
         private static MemoryStream GetAllAudioStream(string basePath)
