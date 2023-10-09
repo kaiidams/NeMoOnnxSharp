@@ -51,8 +51,8 @@ namespace NeMoOnnxSharp
             _inferSess = inferSess;
         }
 
-        public EncDecClassificationModel(string modelPath, bool mbn = false)
-            : this(new InferenceSession(modelPath), mbn)
+        public EncDecClassificationModel(string modelPath, bool speechCommands = false)
+            : this(new InferenceSession(modelPath), speechCommands)
         {
         }
 
