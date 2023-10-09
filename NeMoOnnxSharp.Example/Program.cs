@@ -38,10 +38,6 @@ namespace NeMoOnnxSharp.Example
             {
                 await FramePredict(true);
             }
-            else if (task == "speak")
-            {
-                await Speak();
-            }
             else if (task == "socketaudio")
             {
                 var modelPaths = await DownloadModelsAsync(new string?[]
