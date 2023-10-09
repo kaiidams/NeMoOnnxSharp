@@ -159,7 +159,7 @@ namespace NeMoOnnxSharp.Example
                 {
                     break;
                 }
-                recognizer.Transcribe(buffer.AsSpan(0, bytesRead));
+                recognizer.Write(buffer.AsSpan(0, bytesRead));
             }
         }
 
