@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -31,6 +32,10 @@ namespace NeMoOnnxSharp.Example
             {
                 await FramePredict(true);
             }
+            else if (task == "streamaudio")
+            {
+                await StreamAudio();
+            }
             else
             {
                 throw new InvalidDataException(task);
@@ -43,6 +48,7 @@ namespace NeMoOnnxSharp.Example
             string modelPath = await DownloadModelAsync("stt_en_quartznet15x5");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
+
             using var model = new EncDecCTCModel(modelPath);
             using var reader = File.OpenText(inputPath);
             string? line;
@@ -108,6 +114,81 @@ namespace NeMoOnnxSharp.Example
                 double t = (double)offset / sampleRate;
                 Console.WriteLine("time: {0:0.000}, predicted: {1}", t, predictedText);
             }
+        }
+
+        static async Task StreamAudio()
+        {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string vadModelPath = await DownloadModelAsync("vad_marblenet");
+            string asrModelPath = await DownloadModelAsync("stt_en_quartznet15x5");
+            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
+            string inputPath = Path.Combine(inputDirPath, "transcript.txt");
+
+            using var recognizer = new SpeechRecognizer(vadModelPath, asrModelPath);
+            using var ostream = new FileStream(Path.Combine(inputDirPath, "result.txt"), FileMode.Create);
+            using var writer = new StreamWriter(ostream);
+            int index = 0;
+            recognizer.SpeechStartDetected += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("SpeechStartDetected {0}", t);
+            };
+            recognizer.SpeechEndDetected += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("SpeechEndDetected {0}", t);
+            };
+            recognizer.Recognized += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("Recognized {0} {1} {2}", t, e.Audio?.Length, e.Text);
+                string fileName = string.Format("recognized-{0}.wav", index);
+                writer.WriteLine("{0}|{1}|{2}", fileName, e.Audio?.Length, e.Text);
+                if (e.Audio != null)
+                {
+                    WaveFile.WriteWAV(Path.Combine(inputDirPath, fileName), e.Audio, recognizer.SampleRate);
+                }
+                index += 1;
+            };
+            var stream = GetAllAudioStream(inputDirPath);
+            var buffer = new byte[1024];
+            while (true)
+            {
+                int bytesRead = stream.Read(buffer);
+                if (bytesRead == 0)
+                {
+                    break;
+                }
+                recognizer.Write(buffer.AsSpan(0, bytesRead));
+            }
+        }
+
+        private static MemoryStream GetAllAudioStream(
+            string inputDirPath,
+            int sampleRate = 16000,
+            double gapSeconds = 1.0)
+        {
+            string inputPath = Path.Combine(inputDirPath, "transcript.txt");
+            using var reader = File.OpenText(inputPath);
+            string? line;
+            var stream = new MemoryStream();
+            var waveform = new short[(int)(sampleRate * gapSeconds)];
+            var bytes = MemoryMarshal.Cast<short, byte>(waveform);
+            stream.Write(bytes);
+            while ((line = reader.ReadLine()) != null)
+            {
+                string[] parts = line.Split("|");
+                string name = parts[0];
+                string waveFile = Path.Combine(inputDirPath, name);
+                waveform = WaveFile.ReadWAV(waveFile, sampleRate);
+                bytes = MemoryMarshal.Cast<short, byte>(waveform);
+                stream.Write(bytes);
+                waveform = new short[(int)(sampleRate * gapSeconds)];
+                bytes = MemoryMarshal.Cast<short, byte>(waveform);
+                stream.Write(bytes);
+            }
+            stream.Seek(0, SeekOrigin.Begin);
+            return stream;
         }
 
         private static async Task<string> DownloadModelAsync(string model)
