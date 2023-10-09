@@ -60,12 +60,12 @@ namespace NeMoOnnxSharp
             _frameVad.Dispose();
         }
 
-        public void Transcribe(byte[] input, int offset, int count)
+        public void Write(byte[] input, int offset, int count)
         {
-            Transcribe(input.AsSpan(offset, count));
+            Write(input.AsSpan(offset, count));
         }
 
-        public void Transcribe(Span<byte> input)
+        public void Write(Span<byte> input)
         {
             while (input.Length > 0)
             {
