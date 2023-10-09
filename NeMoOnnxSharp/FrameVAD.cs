@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace NeMoOnnxSharp
 {
@@ -14,7 +13,7 @@ namespace NeMoOnnxSharp
         private readonly int _sampleRate;
         private readonly int _modelWinLength;
         private readonly int _modelHopLength;
-        private int _predictPosition;
+        private int _predictIndex;
         private float[] _predictWindow;
         private readonly AudioFeatureBuffer<short, float> _featureBuffer;
         private readonly EncDecClassificationModel _vad;
@@ -24,7 +23,7 @@ namespace NeMoOnnxSharp
             _sampleRate = 16000;
             _modelWinLength = 32;
             _modelHopLength = 1;
-            _predictPosition = 0;
+            _predictIndex = 0;
             _predictWindow = new float[smoothingWinLength];
             var transform = new MFCC(
                 sampleRate: _sampleRate,
@@ -57,7 +56,7 @@ namespace NeMoOnnxSharp
         public int HopLength => _featureBuffer.HopLength * _modelHopLength;
 
         public int SampleRate => _sampleRate;
-        public int Position {
+        public int PredictionOffset {
             get {
                 int outputTotalWindow = (_predictWindow.Length - 1) * _modelHopLength + _modelWinLength;
                 int outputPosition = _featureBuffer.OutputPosition;
@@ -91,8 +90,8 @@ namespace NeMoOnnxSharp
                     var logits = _vad.Predict(_featureBuffer.OutputBuffer.AsSpan(0, _featureBuffer.NumOutputChannels * _modelWinLength));
                     double x = Math.Exp(logits[0] - logits[1]);
 
-                    _predictWindow[_predictPosition] = (float)(1 / (x + 1));
-                    _predictPosition = (_predictPosition + 1) % _predictWindow.Length;
+                    _predictWindow[_predictIndex] = (float)(1 / (x + 1));
+                    _predictIndex = (_predictIndex + 1) % _predictWindow.Length;
                     result.Add(_predictWindow.Average());
                     _featureBuffer.ConsumeOutput(_featureBuffer.NumOutputChannels * _modelHopLength);
                 }

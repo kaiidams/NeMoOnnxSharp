@@ -99,7 +99,7 @@ namespace NeMoOnnxSharp
 
         private void _Transcribe(Span<short> audioSignal)
         {
-            var pos = -(audioSignal.Length + _frameVad.Position);
+            var pos = -(audioSignal.Length + _frameVad.PredictionOffset);
             var result = _frameVad.Transcribe(audioSignal);
             foreach (var prob in result)
             {
