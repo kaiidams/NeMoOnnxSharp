@@ -7,11 +7,10 @@ using NeMoOnnxSharp.TTSTokenizers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace NeMoOnnxSharp
 {
-    public class SpectrogramGenerator : IDisposable
+    public sealed class SpectrogramGenerator : IDisposable
     {
         private readonly BaseTokenizer _tokenizer;
         private readonly InferenceSession _inferSess;
