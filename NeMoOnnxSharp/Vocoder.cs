@@ -6,11 +6,10 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace NeMoOnnxSharp
 {
-    public class Vocoder : IDisposable
+    public sealed class Vocoder : IDisposable
     {
         private readonly InferenceSession _inferSess;
         private readonly int _nfilt;
