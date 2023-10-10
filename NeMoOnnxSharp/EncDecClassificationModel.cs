@@ -6,11 +6,10 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace NeMoOnnxSharp
 {
-    public class EncDecClassificationModel : ASRModel, IDisposable
+    public sealed class EncDecClassificationModel : ASRModel, IDisposable
     {
         private static readonly string[] SpeechCommandsLabels = new string[]
         {

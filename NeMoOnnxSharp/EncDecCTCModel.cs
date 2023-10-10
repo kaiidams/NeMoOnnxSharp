@@ -6,13 +6,10 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp
 {
-    public class EncDecCTCModel : ASRModel, IDisposable
+    public sealed class EncDecCTCModel : ASRModel, IDisposable
     {
         private const string Vocabulary = " abcdefghijklmnopqrstuvwxyz'_";
 

@@ -5,12 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace NeMoOnnxSharp
 {
-    public class SpeechRecognizer : IDisposable
+    public sealed class SpeechRecognizer : IDisposable
     {
         public delegate void SpeechStart(long position);
         public delegate void SpeechEnd(long position, short[] audioSignal, string? transcript);

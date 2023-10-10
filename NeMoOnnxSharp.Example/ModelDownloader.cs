@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace NeMoOnnxSharp.Example
 {
-    internal class ModelDownloader : IDisposable
+    internal sealed class ModelDownloader : IDisposable
     {
         private readonly HttpClient _httpClient;
 

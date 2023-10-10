@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace NeMoOnnxSharp
 {
-    public class FrameVAD : IDisposable
+    public sealed class FrameVAD : IDisposable
     {
         private readonly int _sampleRate;
         private readonly int _modelWinLength;
