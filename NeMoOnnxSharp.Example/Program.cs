@@ -95,19 +95,21 @@ namespace NeMoOnnxSharp.Example
             string vocoderModelPath = await DownloadModelAsync("tts_en_hifigan");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
-            var config = new SpectrogramGeneratorConfig
+            var config = new SpeechConfig
             {
-                modelPath = specGenModelPath,
-                phonemeDictPath = phonemeDict,
-                heteronymsPath = heteronyms
+                specGen = new SpectrogramGeneratorConfig
+                {
+                    modelPath = specGenModelPath,
+                    phonemeDictPath = phonemeDict,
+                    heteronymsPath = heteronyms
+                },
+                vocoder = new VocoderConfig
+                {
+                    modelPath = vocoderModelPath
+                }
             };
-            var vocoderConfig = new VocoderConfig
-            {
-                modelPath = vocoderModelPath
-            };
-            var specGen = new SpectrogramGenerator(config);
-            var vocoder = new Vocoder(vocoderConfig);
             using var reader = File.OpenText(inputPath);
+            using var synthesizer = new SpeechSynthesizer(config);
             string? line;
             while ((line = reader.ReadLine()) != null)
             {
@@ -116,10 +118,9 @@ namespace NeMoOnnxSharp.Example
                 string targetText = parts[1];
                 Console.WriteLine("Generating {0}...", name);
                 string waveFile = Path.Combine(inputDirPath, name);
-                var parsed = specGen.Parse(targetText);
-                var spec = specGen.GenerateSpectrogram(parsed, pace: 1.0);
-                var audio = vocoder.ConvertSpectrogramToAudio(spec);
-                WaveFile.WriteWAV(waveFile, audio, vocoder.SampleRate);
+                var result = synthesizer.SpeakText(targetText);
+                if (result.AudioData == null) throw new InvalidDataException();
+                WaveFile.WriteWAV(waveFile, result.AudioData, result.SampleRate);
             }
         }
 

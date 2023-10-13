@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace NeMoOnnxSharp
 {
@@ -15,9 +14,13 @@ namespace NeMoOnnxSharp
         {
             vad = new EncDecClassificationConfig();
             asr = new EncDecCTCConfig();
+            specGen = new SpectrogramGeneratorConfig();
+            vocoder = new VocoderConfig();
         }
 
         public EncDecClassificationConfig vad;
         public EncDecCTCConfig asr;
+        public SpectrogramGeneratorConfig specGen;
+        public VocoderConfig vocoder;
     }
 }

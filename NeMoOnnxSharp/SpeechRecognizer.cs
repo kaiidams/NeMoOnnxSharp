@@ -47,6 +47,7 @@ namespace NeMoOnnxSharp
         public void Dispose()
         {
             _frameVad.Dispose();
+            _asrModel.Dispose();
         }
 
         public void Write(byte[] input, int offset, int count)

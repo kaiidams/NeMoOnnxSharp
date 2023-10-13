@@ -8,9 +8,13 @@ using System.Linq;
 
 namespace NeMoOnnxSharp
 {
-    public class SpectrogramGeneratorConfig : ModelConfig
+    public class SpeechSynthesisResult
     {
-        public string? phonemeDictPath;
-        public string? heteronymsPath;
+        public SpeechSynthesisResult()
+        {
+        }
+
+        public short[]? AudioData { get; set; }
+        public int SampleRate { get; set; }
     }
 }
