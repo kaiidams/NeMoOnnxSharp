@@ -8,8 +8,12 @@ using System.Text;
 
 namespace NeMoOnnxSharp
 {
-    public abstract class ASRModel
+    public abstract class ASRModel : Model
     {
+        protected ASRModel(ModelConfig config) : base(config)
+        {
+        }
+
         public abstract string Transcribe(Span<short> inputSignal);
 
         protected float[] TransposeInputSignal(Span<float> inputSignal, int nFeatures)

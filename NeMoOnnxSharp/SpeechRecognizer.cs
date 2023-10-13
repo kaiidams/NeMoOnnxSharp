@@ -25,10 +25,10 @@ namespace NeMoOnnxSharp
         private readonly float _speechStartThreadhold;
         private readonly float _speechEndThreadhold;
 
-        private SpeechRecognizer(FrameVAD frameVad, EncDecCTCModel asrModel)
+        private SpeechRecognizer(EncDecClassificationConfig vadConfig, EncDecCTCConfig asrConfig)
         {
-            _frameVad = frameVad;
-            _asrModel = asrModel;
+            _frameVad = new FrameVAD(vadConfig);
+            _asrModel = new EncDecCTCModel(asrConfig);
             _currentPosition = 0;
             _audioBufferIndex = 0;
             _audioBufferSize = sizeof(short) * _frameVad.SampleRate * 2; // 2sec
@@ -37,16 +37,6 @@ namespace NeMoOnnxSharp
             _isSpeech = false;
             _speechStartThreadhold = 0.7f;
             _speechEndThreadhold = 0.3f;
-        }
-
-        public SpeechRecognizer(string vadModelPath, string asrModelPath) : this(
-            new FrameVAD(vadModelPath), new EncDecCTCModel(asrModelPath))
-        {
-        }
-
-        public SpeechRecognizer(byte[] vadModel, byte[] asrModel) : this(
-            new FrameVAD(vadModel), new EncDecCTCModel(asrModel))
-        {
         }
 
         public int SampleRate => _frameVad.SampleRate;

@@ -28,13 +28,12 @@ namespace NeMoOnnxSharp
         };
 
         private readonly IAudioPreprocessor<short, float> _preProcessor;
-        private readonly InferenceSession _inferSess;
         private readonly int _nMelBands;
         private readonly string[] _labels;
 
         public IAudioPreprocessor<short, float> PreProcessor => _preProcessor;
 
-        private EncDecClassificationModel(InferenceSession inferSess, bool speechCommands)
+        public EncDecClassificationModel(EncDecClassificationConfig config) : base(config)
         {
             _nMelBands = 64;
             _preProcessor = new AudioToMFCCPreprocessor(
@@ -46,18 +45,7 @@ namespace NeMoOnnxSharp
                 //preNormalize: 0.8,
                 nMels: 64,
                 nMFCC: 64);
-            _labels = speechCommands ? SpeechCommandsLabels : VADLabels;
-            _inferSess = inferSess;
-        }
-
-        public EncDecClassificationModel(string modelPath, bool speechCommands = false)
-            : this(new InferenceSession(modelPath), speechCommands)
-        {
-        }
-
-        public EncDecClassificationModel(byte[] model, bool speechCommands = false)
-            : this(new InferenceSession(model), speechCommands)
-        {
+            _labels = config.speechCommands ? SpeechCommandsLabels : VADLabels;
         }
 
         public void Dispose()

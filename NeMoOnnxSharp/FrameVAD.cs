@@ -18,7 +18,7 @@ namespace NeMoOnnxSharp
         private readonly AudioFeatureBuffer<short, float> _featureBuffer;
         private readonly EncDecClassificationModel _vad;
 
-        private FrameVAD(EncDecClassificationModel vad, int smoothingWinLength = 64)
+        public FrameVAD(EncDecClassificationConfig config, int smoothingWinLength = 64)
         {
             _sampleRate = 16000;
             _modelWinLength = 32;
@@ -40,17 +40,7 @@ namespace NeMoOnnxSharp
             _featureBuffer = new AudioFeatureBuffer<short, float>(
                 transform,
                 hopLength: 160);
-            _vad = vad;
-        }
-
-        public FrameVAD(string modelPath) : this(
-            new EncDecClassificationModel(modelPath))
-        {
-        }
-
-        public FrameVAD(byte[] model) : this(
-            new EncDecClassificationModel(model))
-        {
+            _vad = new EncDecClassificationModel(config);
         }
 
         public int HopLength => _featureBuffer.HopLength * _modelHopLength;
