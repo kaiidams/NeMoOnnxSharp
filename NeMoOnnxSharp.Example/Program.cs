@@ -18,23 +18,23 @@ namespace NeMoOnnxSharp.Example
 
             if (task == "transcribe")
             {
-                await Transcribe();
+                await TranscribeAsync();
             }
             else if (task == "speak")
             {
-                await Speak();
+                await SpeakAsync();
             }
             else if (task == "vad")
             {
-                await FramePredict(false);
+                await FramePredictAsync(false);
             }
             else if (task == "mbn")
             {
-                await FramePredict(true);
+                await FramePredictAsync(true);
             }
             else if (task == "streamaudio")
             {
-                await StreamAudio();
+                await StreamAudioAsync();
             }
             else
             {
@@ -42,7 +42,11 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
-        static async Task Transcribe()
+        /// <summary>
+        /// Using EncDecCTCModel with QuartzNet to transcribe texts from speech audio.
+        /// </summary>
+        /// <returns></returns>
+        static async Task TranscribeAsync()
         {
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             string modelPath = await DownloadModelAsync("stt_en_quartznet15x5");
@@ -68,7 +72,12 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
-        static async Task Speak()
+        /// <summary>
+        /// Use high level API SpeechSynthesizer with FastSpeech and HifiGAN
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="InvalidDataException"></exception>
+        static async Task SpeakAsync()
         {
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             string phonemeDict = await DownloadModelAsync("cmudict-0.7b_nv22.10");
@@ -106,7 +115,12 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
-        static async Task FramePredict(bool mbn)
+        /// <summary>
+        /// Use EncDecClassficationModel with MarbleNet for VAD or speech classification
+        /// </summary>
+        /// <param name="mbn"></param>
+        /// <returns></returns>
+        static async Task FramePredictAsync(bool mbn)
         {
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             string modelPath = await DownloadModelAsync(
@@ -135,13 +149,16 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
-        static async Task StreamAudio()
+        /// <summary>
+        /// Use high level API SpeechRecognizer with MarbleNet and QuartzNet
+        /// </summary>
+        /// <returns></returns>
+        static async Task StreamAudioAsync()
         {
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
             string vadModelPath = await DownloadModelAsync("vad_marblenet");
             string asrModelPath = await DownloadModelAsync("stt_en_quartznet15x5");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
-            string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
             var config = new SpeechConfig
             {
