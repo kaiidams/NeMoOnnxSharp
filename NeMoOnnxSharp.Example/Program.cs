@@ -36,13 +36,13 @@ namespace NeMoOnnxSharp.Example
             {
                 await FramePredict(true);
             }
-            else if (task == "socketaudio")
-            {
-                await RunSocketAudioAsync();
-            }
             else if (task == "streamaudio")
             {
                 await RunFileStreamAudioAsync();
+            }
+            else if (task == "socketaudio")
+            {
+                await RunSocketAudioAsync();
             }
             else
             {
@@ -143,6 +143,66 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
+        private static async Task RunFileStreamAudioAsync()
+        {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
+            var modelPaths = await DownloadModelsAsync(new string?[]
+            {
+                    "vad_marblenet", "stt_en_quartznet15x5"
+            });
+            var config = new SpeechConfig
+            {
+                vad = new EncDecClassificationConfig
+                {
+                    modelPath = modelPaths[0],
+                    labels = EncDecClassificationConfig.VADLabels
+                },
+                asr = new EncDecCTCConfig
+                {
+                    modelPath = modelPaths[1],
+                    vocabulary = EncDecCTCConfig.EnglishVocabulary
+                }
+            };
+            using var recognizer = new SpeechRecognizer(config);
+            using var ostream = new FileStream(Path.Combine(inputDirPath, "result.txt"), FileMode.Create);
+            using var writer = new StreamWriter(ostream);
+            int index = 0;
+            recognizer.SpeechStartDetected += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("SpeechStartDetected {0}", t);
+            };
+            recognizer.SpeechEndDetected += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("SpeechEndDetected {0}", t);
+            };
+            recognizer.Recognized += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("Recognized {0} {1} {2}", t, e.Audio?.Length, e.Text);
+                string fileName = string.Format("recognized-{0}.wav", index);
+                writer.WriteLine("{0}|{1}|{2}", fileName, e.Audio?.Length, e.Text);
+                if (e.Audio != null)
+                {
+                    WaveFile.WriteWAV(Path.Combine(inputDirPath, fileName), e.Audio, recognizer.SampleRate);
+                }
+                index += 1;
+            };
+            var stream = GetAllAudioStream(inputDirPath);
+            var buffer = new byte[1024];
+            while (true)
+            {
+                int bytesRead = stream.Read(buffer);
+                if (bytesRead == 0)
+                {
+                    break;
+                }
+                recognizer.Write(buffer.AsSpan(0, bytesRead));
+            }
+        }
+
         private static async Task RunSocketAudioAsync()
         {
             var modelPaths = await DownloadModelsAsync(new string?[]
@@ -224,66 +284,6 @@ namespace NeMoOnnxSharp.Example
                 modelPaths.Add(filePath);
             }
             return modelPaths.ToArray();
-        }
-
-        private static async Task RunFileStreamAudioAsync()
-        {
-            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
-            var modelPaths = await DownloadModelsAsync(new string?[]
-            {
-                    "vad_marblenet", "stt_en_quartznet15x5"
-            });
-            var config = new SpeechConfig
-            {
-                vad = new EncDecClassificationConfig
-                {
-                    modelPath = modelPaths[0],
-                    labels = EncDecClassificationConfig.VADLabels
-                },
-                asr = new EncDecCTCConfig
-                {
-                    modelPath = modelPaths[1],
-                    vocabulary = EncDecCTCConfig.EnglishVocabulary
-                }
-            };
-            using var recognizer = new SpeechRecognizer(config);
-            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
-            using var ostream = new FileStream(Path.Combine(inputDirPath, "result.txt"), FileMode.Create);
-            using var writer = new StreamWriter(ostream);
-            int index = 0;
-            recognizer.SpeechStartDetected += (s, e) =>
-            {
-                double t = (double)e.Offset / recognizer.SampleRate;
-                Console.WriteLine("SpeechStartDetected {0}", t);
-            };
-            recognizer.SpeechEndDetected += (s, e) =>
-            {
-                double t = (double)e.Offset / recognizer.SampleRate;
-                Console.WriteLine("SpeechEndDetected {0}", t);
-            };
-            recognizer.Recognized += (s, e) =>
-            {
-                double t = (double)e.Offset / recognizer.SampleRate;
-                Console.WriteLine("Recognized {0} {1} {2}", t, e.Audio?.Length, e.Text);
-                string fileName = string.Format("recognized-{0}.wav", index);
-                writer.WriteLine("{0}|{1}|{2}", fileName, e.Audio?.Length, e.Text);
-                if (e.Audio != null)
-                {
-                    WaveFile.WriteWAV(Path.Combine(inputDirPath, fileName), e.Audio, recognizer.SampleRate);
-                }
-                index += 1;
-            };
-            var stream = GetAllAudioStream(inputDirPath);
-            var buffer = new byte[1024];
-            while (true)
-            {
-                int bytesRead = stream.Read(buffer);
-                if (bytesRead == 0)
-                {
-                    break;
-                }
-                recognizer.Write(buffer.AsSpan(0, bytesRead));
-            }
         }
 
         private static MemoryStream GetAllAudioStream(
