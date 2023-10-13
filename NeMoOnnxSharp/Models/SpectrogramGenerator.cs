@@ -8,18 +8,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Models
 {
-    public sealed class SpectrogramGenerator : IDisposable
+    public sealed class SpectrogramGenerator : Model, IDisposable
     {
         private readonly BaseTokenizer _tokenizer;
-        private readonly InferenceSession _inferSess;
 
-        private SpectrogramGenerator(InferenceSession inferSess, string phonemeDict, string heteronyms)
+        public SpectrogramGenerator(SpectrogramGeneratorConfig config) : base(config)
         {
+            if (config.phonemeDictPath == null) throw new ArgumentNullException();
+            if (config.heteronymsPath == null) throw new ArgumentNullException();
             var g2p = new EnglishG2p(
-                phonemeDict: phonemeDict,
-                heteronyms: heteronyms,
+                phonemeDict: config.phonemeDictPath,
+                heteronyms: config.heteronymsPath,
                 phonemeProbability: 1.0);
             _tokenizer = new EnglishPhonemesTokenizer(
                 g2p,
@@ -29,17 +30,6 @@ namespace NeMoOnnxSharp
                 apostrophe: true,
                 padWithSpace: true,
                 addBlankAt: BaseTokenizer.AddBlankAt.True);
-            _inferSess = inferSess;
-        }
-
-        public SpectrogramGenerator(string modelPath, string phonemeDict, string heteronyms)
-            : this(new InferenceSession(modelPath), phonemeDict, heteronyms)
-        {
-        }
-
-        public SpectrogramGenerator(byte[] model, string phonemeDict, string heteronyms)
-            : this (new InferenceSession(model), phonemeDict, heteronyms)
-        {
         }
 
         public void Dispose()

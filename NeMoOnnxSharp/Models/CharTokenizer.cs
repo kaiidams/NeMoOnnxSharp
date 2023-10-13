@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Models
 {
     public class CharTokenizer
     {

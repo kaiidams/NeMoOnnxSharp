@@ -3,7 +3,7 @@
 
 using System;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.AudioPreprocessing
 {
     public class AudioToMelSpectrogramPreprocessor : IAudioPreprocessor<short, float>
     {
@@ -43,6 +43,8 @@ namespace NeMoOnnxSharp
         private readonly int _magPower;
         private readonly double _logZeroGuardValue;
         private readonly bool _log;
+
+        public int SampleRate => _sampleRate;
 
         public AudioToMelSpectrogramPreprocessor(
             int sampleRate = 16000,
@@ -201,7 +203,7 @@ namespace NeMoOnnxSharp
             for (int i = 0; i < _window.Length; i++)
             {
                 int k = i + waveformOffset;
-                double v = (k >= 0 && k < input.Length) ? input[k] : 0;
+                double v = k >= 0 && k < input.Length ? input[k] : 0;
                 frame[i + frameOffset] = scale * v * _window[i];
             }
             for (int i = frameOffset + _window.Length; i < frame.Length; i++)
@@ -221,7 +223,7 @@ namespace NeMoOnnxSharp
             for (int i = 0; i < _window.Length; i++)
             {
                 int k = i + waveformOffset;
-                double v = (k >= 0 && k < input.Length) ? input[k] : 0;
+                double v = k >= 0 && k < input.Length ? input[k] : 0;
                 k--;
                 if (k >= 0 && k < input.Length) v -= _preemph * input[k];
                 frame[i + frameOffset] = scale * v * _window[i];

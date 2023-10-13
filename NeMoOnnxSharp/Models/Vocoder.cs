@@ -7,28 +7,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Models
 {
-    public sealed class Vocoder : IDisposable
+    public sealed class Vocoder : Model, IDisposable
     {
-        private readonly InferenceSession _inferSess;
         private readonly int _nfilt;
         private readonly int _sampleRate;
-        private Vocoder(InferenceSession inferSess)
+
+        public Vocoder(VocoderConfig config) : base(config)
         {
-            _inferSess = inferSess;
             _nfilt = 80;
             _sampleRate = 22050;
-        }
-
-        public Vocoder(string modelPath)
-            : this(new InferenceSession(modelPath))
-        {
-        }
-
-        public Vocoder(byte[] model)
-            : this(new InferenceSession(model))
-        {
         }
 
         public int SampleRate { get { return _sampleRate; } }

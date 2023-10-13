@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.AudioPreprocessing
 {
     public interface IAudioFeatureBuffer<T, S>
     {

@@ -3,24 +3,23 @@
 
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+using NeMoOnnxSharp.AudioPreprocessing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Models
 {
     public sealed class EncDecCTCModel : ASRModel, IDisposable
     {
-        private const string Vocabulary = " abcdefghijklmnopqrstuvwxyz'_";
-
         private readonly IAudioPreprocessor<short, float> _preProcessor;
         private readonly CharTokenizer _tokenizer;
-        private readonly InferenceSession _inferSess;
         private readonly int _features;
 
         public IAudioPreprocessor<short, float> PreProcessor => _preProcessor;
+        public int SampleRate => _preProcessor.SampleRate;
 
-        private EncDecCTCModel(InferenceSession inferSess)
+        public EncDecCTCModel(EncDecCTCConfig config) : base(config)
         {
             _features = 64;
             _preProcessor = new AudioToMelSpectrogramPreprocessor(
@@ -30,18 +29,8 @@ namespace NeMoOnnxSharp
                 windowStride: 0.01,
                 nFFT: 512,
                 features: _features);
-            _tokenizer = new CharTokenizer(Vocabulary);
-            _inferSess = inferSess;
-        }
-
-        public EncDecCTCModel(string modelPath)
-            : this(new InferenceSession(modelPath))
-        {
-        }
-
-        public EncDecCTCModel(byte[] model)
-            : this(new InferenceSession(model))
-        {
+            if (config.vocabulary == null) throw new ArgumentNullException("config");
+            _tokenizer = new CharTokenizer(config.vocabulary);
         }
 
         public void Dispose()

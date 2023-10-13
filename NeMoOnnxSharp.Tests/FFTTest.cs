@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeMoOnnxSharp.AudioPreprocessing;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;

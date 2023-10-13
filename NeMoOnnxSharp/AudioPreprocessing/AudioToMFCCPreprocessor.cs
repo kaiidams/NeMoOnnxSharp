@@ -3,7 +3,7 @@
 
 using System;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.AudioPreprocessing
 {
     public class AudioToMFCCPreprocessor : IAudioPreprocessor<short, float>
     {
@@ -12,6 +12,8 @@ namespace NeMoOnnxSharp
         protected readonly int _nWindowStride;
         private readonly double _preNormalize;
         private readonly IFeaturizer<short, float> _featurizer;
+
+        public int SampleRate => _featurizer.SampleRate;
 
         public AudioToMFCCPreprocessor(
             int sampleRate = 16000,
