@@ -12,9 +12,6 @@ namespace NeMoOnnxSharp
 {
     public sealed class SpeechRecognizer : IDisposable
     {
-        public delegate void SpeechStart(long position);
-        public delegate void SpeechEnd(long position, short[] audioSignal, string? transcript);
-
         private readonly FrameVAD _frameVad;
         private readonly EncDecCTCModel _asrModel;
         private readonly int _audioBufferIncrease;
