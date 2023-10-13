@@ -18,8 +18,7 @@ namespace NeMoOnnxSharp.Example
 
         static async Task Main(string[] args)
         {
-            string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string task = args.Length > 0 ? args[0] : "speak";
+            string task = args.Length > 0 ? args[0] : "streamaudio";
 
             if (task == "transcribe")
             {
@@ -39,21 +38,11 @@ namespace NeMoOnnxSharp.Example
             }
             else if (task == "socketaudio")
             {
-                var modelPaths = await DownloadModelsAsync(new string?[]
-                {
-                    "vad_marblenet", "stt_en_quartznet15x5"
-                });
-                RunSocketAudio(modelPaths);
-                return;
+                await RunSocketAudioAsync();
             }
             else if (task == "streamaudio")
             {
-                var modelPaths = await DownloadModelsAsync(new string?[]
-                {
-                    "vad_marblenet", "stt_en_quartznet15x5"
-                });
-                RunFileStreamAudio(basePath, modelPaths);
-                return;
+                await RunFileStreamAudioAsync();
             }
             else
             {
@@ -154,8 +143,12 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
-        private static void RunSocketAudio(string[] modelPaths)
+        private static async Task RunSocketAudioAsync()
         {
+            var modelPaths = await DownloadModelsAsync(new string?[]
+            {
+                    "vad_marblenet", "stt_en_quartznet15x5"
+            });
             var config = new SpeechConfig
             {
                 vad = new EncDecClassificationConfig
@@ -233,8 +226,13 @@ namespace NeMoOnnxSharp.Example
             return modelPaths.ToArray();
         }
 
-        private static void RunFileStreamAudio(string basePath, string[] modelPaths)
+        private static async Task RunFileStreamAudioAsync()
         {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            var modelPaths = await DownloadModelsAsync(new string?[]
+            {
+                    "vad_marblenet", "stt_en_quartznet15x5"
+            });
             var config = new SpeechConfig
             {
                 vad = new EncDecClassificationConfig
@@ -249,7 +247,7 @@ namespace NeMoOnnxSharp.Example
                 }
             };
             using var recognizer = new SpeechRecognizer(config);
-            string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
+            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             using var ostream = new FileStream(Path.Combine(inputDirPath, "result.txt"), FileMode.Create);
             using var writer = new StreamWriter(ostream);
             int index = 0;
@@ -275,7 +273,7 @@ namespace NeMoOnnxSharp.Example
                 }
                 index += 1;
             };
-            var stream = GetAllAudioStream(basePath);
+            var stream = GetAllAudioStream(inputDirPath);
             var buffer = new byte[1024];
             while (true)
             {
@@ -288,28 +286,32 @@ namespace NeMoOnnxSharp.Example
             }
         }
 
-        private static MemoryStream GetAllAudioStream(string basePath)
+        private static MemoryStream GetAllAudioStream(
+            string inputDirPath,
+            int sampleRate = 16000,
+            double gapSeconds = 1.0)
         {
-            string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
             using var reader = File.OpenText(inputPath);
             string? line;
             var stream = new MemoryStream();
-            stream.Write(new byte[32000]);
+            var waveform = new short[(int)(sampleRate * gapSeconds)];
+            var bytes = MemoryMarshal.Cast<short, byte>(waveform);
+            stream.Write(bytes);
             var rng = new Random();
             while ((line = reader.ReadLine()) != null)
             {
                 string[] parts = line.Split("|");
                 string name = parts[0];
                 string waveFile = Path.Combine(inputDirPath, name);
-                var waveform = WaveFile.ReadWAV(waveFile, 16000);
+                waveform = WaveFile.ReadWAV(waveFile, sampleRate);
                 for (int i = 0; i < waveform.Length; i++)
                 {
                     //waveform[i] += (short)(rng.NextDouble() * 2000 - 1000);
                 }
-                var bytes = MemoryMarshal.Cast<short, byte>(waveform);
+                bytes = MemoryMarshal.Cast<short, byte>(waveform);
                 stream.Write(bytes);
-                waveform = new short[16000];
+                waveform = new short[(int)(sampleRate * gapSeconds)];
                 for (int i = 0; i < waveform.Length; i++)
                 {
                     //waveform[i] = (short)(rng.NextDouble() * 2000 - 1000);
