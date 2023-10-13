@@ -18,7 +18,7 @@ namespace NeMoOnnxSharp.Example
         static async Task Main(string[] args)
         {
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string task = args.Length > 0 ? args[0] : "mbn";
+            string task = args.Length > 0 ? args[0] : "speak";
 
             if (task == "transcribe")
             {
@@ -95,9 +95,18 @@ namespace NeMoOnnxSharp.Example
             string vocoderModelPath = await DownloadModelAsync("tts_en_hifigan");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
-
-            var specGen = new SpectrogramGenerator(specGenModelPath, phonemeDict, heteronyms);
-            var vocoder = new Vocoder(vocoderModelPath);
+            var config = new SpectrogramGeneratorConfig
+            {
+                modelPath = specGenModelPath,
+                phonemeDictPath = phonemeDict,
+                heteronymsPath = heteronyms
+            };
+            var vocoderConfig = new VocoderConfig
+            {
+                modelPath = vocoderModelPath
+            };
+            var specGen = new SpectrogramGenerator(config);
+            var vocoder = new Vocoder(vocoderConfig);
             using var reader = File.OpenText(inputPath);
             string? line;
             while ((line = reader.ReadLine()) != null)
