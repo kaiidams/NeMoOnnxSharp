@@ -11,6 +11,22 @@ namespace NeMoOnnxSharp
 {
     public class EncDecClassificationConfig : ModelConfig
     {
-        public bool speechCommands;
+        public static readonly string[] SpeechCommandsLabels = new string[]
+        {
+            "visual", "wow", "learn", "backward", "dog",
+            "two", "left", "happy", "nine", "go",
+            "up", "bed", "stop", "one", "zero",
+            "tree", "seven", "on", "four", "bird",
+            "right", "eight", "no", "six", "forward",
+            "house", "marvin", "sheila", "five", "off",
+            "three", "down", "cat", "follow", "yes"
+        };
+        public static readonly string[] VADLabels = new string[]
+        {
+            "background",
+            "speech"
+        };
+
+        public string[]? labels;
     }
 }

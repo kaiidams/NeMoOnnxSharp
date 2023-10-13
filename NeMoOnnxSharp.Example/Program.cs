@@ -18,7 +18,7 @@ namespace NeMoOnnxSharp.Example
         static async Task Main(string[] args)
         {
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string task = args.Length > 0 ? args[0] : "socketaudio";
+            string task = args.Length > 0 ? args[0] : "mbn";
 
             if (task == "transcribe")
             {
@@ -66,8 +66,12 @@ namespace NeMoOnnxSharp.Example
             string modelPath = await DownloadModelAsync("stt_en_quartznet15x5");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
-
-            using var model = new EncDecCTCModel(modelPath);
+            var config = new EncDecCTCConfig
+            {
+                modelPath = modelPath,
+                vocabulary = EncDecCTCConfig.EnglishVocabulary
+            };
+            using var model = new EncDecCTCModel(config);
             using var reader = File.OpenText(inputPath);
             string? line;
             while ((line = reader.ReadLine()) != null)
@@ -117,7 +121,12 @@ namespace NeMoOnnxSharp.Example
                 mbn ? "commandrecognition_en_matchboxnet3x1x64_v2" : "vad_marblenet");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
-            using var model = new EncDecClassificationModel(modelPath, mbn);
+            var config = new EncDecClassificationConfig
+            {
+                modelPath = modelPath,
+                labels = mbn ? EncDecClassificationConfig.SpeechCommandsLabels : EncDecClassificationConfig.VADLabels,
+            };
+            using var model = new EncDecClassificationModel(config);
             var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
             double windowStride = 0.10;
             double windowSize = mbn ? 1.28 : 0.15;
@@ -136,7 +145,20 @@ namespace NeMoOnnxSharp.Example
 
         private static void RunSocketAudio(string[] modelPaths)
         {
-            using var recognizer = new SpeechRecognizer(modelPaths[0], modelPaths[1]);
+            var config = new SpeechConfig
+            {
+                vad = new EncDecClassificationConfig
+                {
+                    modelPath = modelPaths[0],
+                    labels = EncDecClassificationConfig.VADLabels
+                },
+                asr = new EncDecCTCConfig
+                {
+                    modelPath = modelPaths[1],
+                    vocabulary = EncDecCTCConfig.EnglishVocabulary
+                }
+            };
+            using var recognizer = new SpeechRecognizer(config);
             using Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
             socket.Connect("127.0.0.1", 17843);
             Console.WriteLine("Connected");
@@ -202,7 +224,20 @@ namespace NeMoOnnxSharp.Example
 
         private static void RunFileStreamAudio(string basePath, string[] modelPaths)
         {
-            using var recognizer = new SpeechRecognizer(modelPaths[0], modelPaths[1]);
+            var config = new SpeechConfig
+            {
+                vad = new EncDecClassificationConfig
+                {
+                    modelPath = modelPaths[0],
+                    labels = EncDecClassificationConfig.VADLabels
+                },
+                asr = new EncDecCTCConfig
+                {
+                    modelPath = modelPaths[1],
+                    vocabulary = EncDecCTCConfig.EnglishVocabulary
+                }
+            };
+            using var recognizer = new SpeechRecognizer(config);
             string inputDirPath = Path.Combine(basePath, "..", "..", "..", "..", "test_data");
             using var ostream = new FileStream(Path.Combine(inputDirPath, "result.txt"), FileMode.Create);
             using var writer = new StreamWriter(ostream);

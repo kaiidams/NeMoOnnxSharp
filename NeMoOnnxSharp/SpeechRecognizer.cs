@@ -25,10 +25,10 @@ namespace NeMoOnnxSharp
         private readonly float _speechStartThreadhold;
         private readonly float _speechEndThreadhold;
 
-        private SpeechRecognizer(EncDecClassificationConfig vadConfig, EncDecCTCConfig asrConfig)
+        public SpeechRecognizer(SpeechConfig config)
         {
-            _frameVad = new FrameVAD(vadConfig);
-            _asrModel = new EncDecCTCModel(asrConfig);
+            _frameVad = new FrameVAD(config.vad);
+            _asrModel = new EncDecCTCModel(config.asr);
             _currentPosition = 0;
             _audioBufferIndex = 0;
             _audioBufferSize = sizeof(short) * _frameVad.SampleRate * 2; // 2sec

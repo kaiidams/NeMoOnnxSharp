@@ -11,6 +11,9 @@ namespace NeMoOnnxSharp
 {
     public class EncDecCTCConfig : ModelConfig
     {
+        public const string EnglishVocabulary = " abcdefghijklmnopqrstuvwxyz'_";
+        public const string GermanVocabulary = " abcdefghijklmnopqrstuvwxyzäöüß";
+
         public string? vocabulary;
     }
 }

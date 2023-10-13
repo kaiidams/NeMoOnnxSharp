@@ -11,22 +11,6 @@ namespace NeMoOnnxSharp
 {
     public sealed class EncDecClassificationModel : ASRModel, IDisposable
     {
-        private static readonly string[] SpeechCommandsLabels = new string[]
-        {
-            "visual", "wow", "learn", "backward", "dog",
-            "two", "left", "happy", "nine", "go",
-            "up", "bed", "stop", "one", "zero",
-            "tree", "seven", "on", "four", "bird",
-            "right", "eight", "no", "six", "forward",
-            "house", "marvin", "sheila", "five", "off",
-            "three", "down", "cat", "follow", "yes"
-        };
-        private static readonly string[] VADLabels = new string[]
-        {
-            "background",
-            "speech"
-        };
-
         private readonly IAudioPreprocessor<short, float> _preProcessor;
         private readonly int _nMelBands;
         private readonly string[] _labels;
@@ -45,7 +29,8 @@ namespace NeMoOnnxSharp
                 //preNormalize: 0.8,
                 nMels: 64,
                 nMFCC: 64);
-            _labels = config.speechCommands ? SpeechCommandsLabels : VADLabels;
+            if (config.labels == null) throw new ArgumentNullException("labels");
+            _labels = config.labels;
         }
 
         public void Dispose()

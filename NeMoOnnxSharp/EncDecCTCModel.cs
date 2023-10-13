@@ -11,9 +11,6 @@ namespace NeMoOnnxSharp
 {
     public sealed class EncDecCTCModel : ASRModel, IDisposable
     {
-        private const string EnglishVocabulary = " abcdefghijklmnopqrstuvwxyz'_";
-        private const string GermanVocabulary = " abcdefghijklmnopqrstuvwxyzäöüß";
-
         private readonly IAudioPreprocessor<short, float> _preProcessor;
         private readonly CharTokenizer _tokenizer;
         private readonly int _features;
@@ -30,6 +27,7 @@ namespace NeMoOnnxSharp
                 windowStride: 0.01,
                 nFFT: 512,
                 features: _features);
+            if (config.vocabulary == null) throw new ArgumentNullException("config");
             _tokenizer = new CharTokenizer(config.vocabulary);
         }
 
