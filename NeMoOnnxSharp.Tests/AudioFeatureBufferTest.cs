@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeMoOnnxSharp.AudioPreprocessing;
 using NuGet.Frameworks;
 using System;
 using System.Diagnostics;

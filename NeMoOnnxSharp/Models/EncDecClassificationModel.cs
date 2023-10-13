@@ -3,38 +3,22 @@
 
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+using NeMoOnnxSharp.AudioPreprocessing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Models
 {
     public sealed class EncDecClassificationModel : ASRModel, IDisposable
     {
-        private static readonly string[] SpeechCommandsLabels = new string[]
-        {
-            "visual", "wow", "learn", "backward", "dog",
-            "two", "left", "happy", "nine", "go",
-            "up", "bed", "stop", "one", "zero",
-            "tree", "seven", "on", "four", "bird",
-            "right", "eight", "no", "six", "forward",
-            "house", "marvin", "sheila", "five", "off",
-            "three", "down", "cat", "follow", "yes"
-        };
-        private static readonly string[] VADLabels = new string[]
-        {
-            "background",
-            "speech"
-        };
-
         private readonly IAudioPreprocessor<short, float> _preProcessor;
-        private readonly InferenceSession _inferSess;
         private readonly int _nMelBands;
         private readonly string[] _labels;
 
         public IAudioPreprocessor<short, float> PreProcessor => _preProcessor;
 
-        private EncDecClassificationModel(InferenceSession inferSess, bool speechCommands)
+        public EncDecClassificationModel(EncDecClassificationConfig config) : base(config)
         {
             _nMelBands = 64;
             _preProcessor = new AudioToMFCCPreprocessor(
@@ -46,18 +30,8 @@ namespace NeMoOnnxSharp
                 //preNormalize: 0.8,
                 nMels: 64,
                 nMFCC: 64);
-            _labels = speechCommands ? SpeechCommandsLabels : VADLabels;
-            _inferSess = inferSess;
-        }
-
-        public EncDecClassificationModel(string modelPath, bool speechCommands = false)
-            : this(new InferenceSession(modelPath), speechCommands)
-        {
-        }
-
-        public EncDecClassificationModel(byte[] model, bool speechCommands = false)
-            : this(new InferenceSession(model), speechCommands)
-        {
+            if (config.labels == null) throw new ArgumentNullException("labels");
+            _labels = config.labels;
         }
 
         public void Dispose()

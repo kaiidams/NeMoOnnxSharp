@@ -5,8 +5,8 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using NeMoOnnxSharp.Models;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -48,8 +48,12 @@ namespace NeMoOnnxSharp.Example
             string modelPath = await DownloadModelAsync("stt_en_quartznet15x5");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
-
-            using var model = new EncDecCTCModel(modelPath);
+            var config = new EncDecCTCConfig
+            {
+                modelPath = modelPath,
+                vocabulary = EncDecCTCConfig.EnglishVocabulary
+            };
+            using var model = new EncDecCTCModel(config);
             using var reader = File.OpenText(inputPath);
             string? line;
             while ((line = reader.ReadLine()) != null)
@@ -58,7 +62,7 @@ namespace NeMoOnnxSharp.Example
                 string name = parts[0];
                 string targetText = parts[1];
                 string waveFile = Path.Combine(inputDirPath, name);
-                var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
+                var audioSignal = WaveFile.ReadWAV(waveFile, model.SampleRate);
                 string predictText = model.Transcribe(audioSignal);
                 Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
             }
@@ -73,10 +77,21 @@ namespace NeMoOnnxSharp.Example
             string vocoderModelPath = await DownloadModelAsync("tts_en_hifigan");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
-
-            var specGen = new SpectrogramGenerator(specGenModelPath, phonemeDict, heteronyms);
-            var vocoder = new Vocoder(vocoderModelPath);
+            var config = new SpeechConfig
+            {
+                specGen = new SpectrogramGeneratorConfig
+                {
+                    modelPath = specGenModelPath,
+                    phonemeDictPath = phonemeDict,
+                    heteronymsPath = heteronyms
+                },
+                vocoder = new VocoderConfig
+                {
+                    modelPath = vocoderModelPath
+                }
+            };
             using var reader = File.OpenText(inputPath);
+            using var synthesizer = new SpeechSynthesizer(config);
             string? line;
             while ((line = reader.ReadLine()) != null)
             {
@@ -85,10 +100,9 @@ namespace NeMoOnnxSharp.Example
                 string targetText = parts[1];
                 Console.WriteLine("Generating {0}...", name);
                 string waveFile = Path.Combine(inputDirPath, name);
-                var parsed = specGen.Parse(targetText);
-                var spec = specGen.GenerateSpectrogram(parsed, pace: 1.0);
-                var audio = vocoder.ConvertSpectrogramToAudio(spec);
-                WaveFile.WriteWAV(waveFile, audio, vocoder.SampleRate);
+                var result = synthesizer.SpeakText(targetText);
+                if (result.AudioData == null) throw new InvalidDataException();
+                WaveFile.WriteWAV(waveFile, result.AudioData, result.SampleRate);
             }
         }
 
@@ -99,7 +113,12 @@ namespace NeMoOnnxSharp.Example
                 mbn ? "commandrecognition_en_matchboxnet3x1x64_v2" : "vad_marblenet");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string waveFile = Path.Combine(inputDirPath, "SpeechCommands_demo.wav");
-            using var model = new EncDecClassificationModel(modelPath, mbn);
+            var config = new EncDecClassificationConfig
+            {
+                modelPath = modelPath,
+                labels = mbn ? EncDecClassificationConfig.SpeechCommandsLabels : EncDecClassificationConfig.VADLabels,
+            };
+            using var model = new EncDecClassificationModel(config);
             var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
             double windowStride = 0.10;
             double windowSize = mbn ? 1.28 : 0.15;
@@ -124,7 +143,20 @@ namespace NeMoOnnxSharp.Example
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
 
-            using var recognizer = new SpeechRecognizer(vadModelPath, asrModelPath);
+            var config = new SpeechConfig
+            {
+                vad = new EncDecClassificationConfig
+                {
+                    modelPath = vadModelPath,
+                    labels = EncDecClassificationConfig.VADLabels
+                },
+                asr = new EncDecCTCConfig
+                {
+                    modelPath = asrModelPath,
+                    vocabulary = EncDecCTCConfig.EnglishVocabulary
+                }
+            };
+            using var recognizer = new SpeechRecognizer(config);
             using var ostream = new FileStream(Path.Combine(inputDirPath, "result.txt"), FileMode.Create);
             using var writer = new StreamWriter(ostream);
             int index = 0;

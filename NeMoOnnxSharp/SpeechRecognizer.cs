@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using NeMoOnnxSharp.Models;
 
 namespace NeMoOnnxSharp
 {
@@ -22,10 +23,10 @@ namespace NeMoOnnxSharp
         private readonly float _speechStartThreadhold;
         private readonly float _speechEndThreadhold;
 
-        private SpeechRecognizer(FrameVAD frameVad, EncDecCTCModel asrModel)
+        public SpeechRecognizer(SpeechConfig config)
         {
-            _frameVad = frameVad;
-            _asrModel = asrModel;
+            _frameVad = new FrameVAD(config.vad);
+            _asrModel = new EncDecCTCModel(config.asr);
             _currentPosition = 0;
             _audioBufferIndex = 0;
             _audioBufferSize = sizeof(short) * _frameVad.SampleRate * 2; // 2sec
@@ -36,16 +37,6 @@ namespace NeMoOnnxSharp
             _speechEndThreadhold = 0.3f;
         }
 
-        public SpeechRecognizer(string vadModelPath, string asrModelPath) : this(
-            new FrameVAD(vadModelPath), new EncDecCTCModel(asrModelPath))
-        {
-        }
-
-        public SpeechRecognizer(byte[] vadModel, byte[] asrModel) : this(
-            new FrameVAD(vadModel), new EncDecCTCModel(asrModel))
-        {
-        }
-
         public int SampleRate => _frameVad.SampleRate;
         public event EventHandler<SpeechRecognitionEventArgs>? Recognized;
         public event EventHandler<SpeechRecognitionEventArgs>? SpeechStartDetected;
@@ -54,6 +45,7 @@ namespace NeMoOnnxSharp
         public void Dispose()
         {
             _frameVad.Dispose();
+            _asrModel.Dispose();
         }
 
         public void Write(byte[] input, int offset, int count)

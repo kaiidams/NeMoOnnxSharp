@@ -3,7 +3,7 @@
 
 using System;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.AudioPreprocessing
 {
     public class MFCC : IFeaturizer<short, float>
     {
@@ -20,6 +20,7 @@ namespace NeMoOnnxSharp
         private readonly bool _logMels;
         private readonly int _nMFCC;
 
+        public int SampleRate => _sampleRate;
         public int InputLength => _window.Length;
         public int OutputLength => _nMFCC;
 

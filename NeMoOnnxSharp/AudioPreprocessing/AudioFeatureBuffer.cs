@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.AudioPreprocessing
 {
     public class AudioFeatureBuffer<T1, T2> : IAudioFeatureBuffer<T1, T2>
     {
@@ -39,7 +39,7 @@ namespace NeMoOnnxSharp
             _winLength = transform.InputLength;
             _numInputChannels = 1;
             _numOutputChannels = transform.OutputLength;
-            _inputBuffer = new T1[(_winLength / _hopLength) * _hopLength + _winLength];
+            _inputBuffer = new T1[_winLength / _hopLength * _hopLength + _winLength];
             _inputCount = 0;
             _outputBuffer = new T2[_numOutputChannels * numOutputFrames];
             _outputCount = 0;
@@ -60,7 +60,7 @@ namespace NeMoOnnxSharp
                 //   0 < _inputCount <= 160  ->  n = _winLength - _inputCount
                 // 160 < _inputCount <= 320  ->  n = _hopLength + _winLength - _inputCount
                 // 320 < _inputCount <  400  ->  n = 2 * _hopLength + _winLength - _inputCount
-                int needed = ((_inputCount - 1) / _hopLength) * _hopLength + _winLength - _inputCount;
+                int needed = (_inputCount - 1) / _hopLength * _hopLength + _winLength - _inputCount;
                 written = Math.Min(needed, input.Length);
 
                 input.Slice(0, written).CopyTo(_inputBuffer.AsSpan(_inputCount, written));
