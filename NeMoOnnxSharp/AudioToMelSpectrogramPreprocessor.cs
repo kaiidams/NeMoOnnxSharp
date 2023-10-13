@@ -44,6 +44,8 @@ namespace NeMoOnnxSharp
         private readonly double _logZeroGuardValue;
         private readonly bool _log;
 
+        public int SampleRate => _sampleRate;
+
         public AudioToMelSpectrogramPreprocessor(
             int sampleRate = 16000,
             double windowSize = 0.02,

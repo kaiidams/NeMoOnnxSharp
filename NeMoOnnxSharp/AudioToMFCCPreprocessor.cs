@@ -13,6 +13,8 @@ namespace NeMoOnnxSharp
         private readonly double _preNormalize;
         private readonly IFeaturizer<short, float> _featurizer;
 
+        public int SampleRate => _featurizer.SampleRate;
+
         public AudioToMFCCPreprocessor(
             int sampleRate = 16000,
             double windowSize = 0.02,

@@ -10,6 +10,8 @@ namespace NeMoOnnxSharp
 {
     public interface IAudioPreprocessor<T1, T2>
     {
+        int SampleRate { get; }
+
         T2[] GetFeatures(Span<T1> input);
     }
 }

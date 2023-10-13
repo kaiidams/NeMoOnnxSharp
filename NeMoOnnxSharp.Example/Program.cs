@@ -80,7 +80,7 @@ namespace NeMoOnnxSharp.Example
                 string name = parts[0];
                 string targetText = parts[1];
                 string waveFile = Path.Combine(inputDirPath, name);
-                var audioSignal = WaveFile.ReadWAV(waveFile, 16000);
+                var audioSignal = WaveFile.ReadWAV(waveFile, model.SampleRate);
                 string predictText = model.Transcribe(audioSignal);
                 Console.WriteLine("{0}|{1}|{2}", name, targetText, predictText);
             }

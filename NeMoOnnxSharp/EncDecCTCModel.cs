@@ -16,6 +16,7 @@ namespace NeMoOnnxSharp
         private readonly int _features;
 
         public IAudioPreprocessor<short, float> PreProcessor => _preProcessor;
+        public int SampleRate => _preProcessor.SampleRate;
 
         public EncDecCTCModel(EncDecCTCConfig config) : base(config)
         {
