@@ -5,11 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.AudioPreprocessing
 {
-    public enum MelNorm
+    public enum WindowFunction
     {
-        None,
-        Slaney
+        Bartlett,
+        Blackman,
+        Hamming,
+        Hann,
+        Kaiser
     }
 }

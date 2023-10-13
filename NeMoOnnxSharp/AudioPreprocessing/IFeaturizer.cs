@@ -3,7 +3,7 @@
 
 using System;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.AudioPreprocessing
 {
     public interface IFeaturizer<T1, T2>
     {

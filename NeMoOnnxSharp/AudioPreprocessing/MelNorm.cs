@@ -3,15 +3,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.AudioPreprocessing
 {
-    public interface IAudioPreprocessor<T1, T2>
+    public enum MelNorm
     {
-        int SampleRate { get; }
-
-        T2[] GetFeatures(Span<T1> input);
+        None,
+        Slaney
     }
 }
