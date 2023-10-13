@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NeMoOnnxSharp.AudioPreprocessing;
+using NeMoOnnxSharp.Models;
 
 namespace NeMoOnnxSharp
 {

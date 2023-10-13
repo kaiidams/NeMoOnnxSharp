@@ -5,11 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Models
 {
-    public class ModelConfig
+    public class VocoderConfig : ModelConfig
     {
-        public string? modelPath;
-        public byte[]? model;
     }
 }

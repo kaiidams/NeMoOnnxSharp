@@ -4,9 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using NeMoOnnxSharp.AudioPreprocessing;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.AudioPreprocessing
 {
     public static class Window
     {

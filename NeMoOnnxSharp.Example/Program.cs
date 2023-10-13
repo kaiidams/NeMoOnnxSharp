@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Collections.Generic;
+using NeMoOnnxSharp.Models;
 
 namespace NeMoOnnxSharp.Example
 {

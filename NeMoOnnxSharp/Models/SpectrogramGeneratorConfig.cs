@@ -3,11 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Models
 {
-    public class VocoderConfig : ModelConfig
+    public class SpectrogramGeneratorConfig : ModelConfig
     {
+        public string? phonemeDictPath;
+        public string? heteronymsPath;
     }
 }

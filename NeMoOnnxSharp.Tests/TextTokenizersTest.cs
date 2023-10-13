@@ -65,12 +65,14 @@ namespace NeMoOnnxSharp.Tests
         [TestMethod]
         public void TestTokenizerVocab()
         {
+            Assert.IsNotNull(_tokenizer);
             CollectionAssert.AreEquivalent(ExpectedTokens, _tokenizer.Tokens);
         }
 
         [TestMethod]
         public void TestEnglishG2p()
         {
+            Assert.IsNotNull(_g2p);
             var pron = string.Join("|", _g2p.Parse(NormalizedSampleText));
             Assert.AreEqual(SamplePronText, pron);
         }
@@ -78,6 +80,7 @@ namespace NeMoOnnxSharp.Tests
         [TestMethod]
         public void TestEnglishEncode()
         {
+            Assert.IsNotNull(_tokenizer);
             var parsed = _tokenizer.Encode(NormalizedSampleText);
             CollectionAssert.AreEquivalent(SampleParsed, parsed);
         }

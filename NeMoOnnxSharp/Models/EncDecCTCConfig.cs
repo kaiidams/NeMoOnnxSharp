@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeMoOnnxSharp
+namespace NeMoOnnxSharp.Models
 {
     public class EncDecCTCConfig : ModelConfig
     {
