@@ -15,7 +15,7 @@ namespace NeMoOnnxSharp.Example
     {
         static async Task Main(string[] args)
         {
-            string task = args.Length == 0 ? "german" : args[0];
+            string task = args.Length == 0 ? "transcribe" : args[0];
 
             if (task == "transcribe")
             {
