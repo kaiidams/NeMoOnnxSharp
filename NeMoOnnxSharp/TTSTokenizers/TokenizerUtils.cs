@@ -13,7 +13,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -46,6 +45,49 @@ namespace NeMoOnnxSharp.TTSTokenizers
             // define char set based on https://en.wikipedia.org/wiki/List_of_Unicode_characters
             var latinAlphabetBasic = "A-Za-z";
             _wordsReEn = new Regex(@$"([{latinAlphabetBasic}]+(?:[{latinAlphabetBasic}\-']*[{latinAlphabetBasic}]+)*)|(\|[^|]*\|)|([^{latinAlphabetBasic}|]+)");
+        }
+
+        /// <summary>
+        /// Normalize unicode text with "NFC", and convert right single quotation mark (U+2019, decimal 8217) as an apostrophe.
+        /// </summary>
+        /// <param name="text">the original input sentence.</param>
+        /// <returns>normalized text.</returns>
+        public static string AnyLocaleTextPreprocessing(string text)
+        {
+            var res = new List<char>();
+            foreach (var c in NormalizeUnicodeText(text))
+            {
+                if (c == '’')  // right single quotation mark (U+2019, decimal 8217) as an apostrophe
+                {
+                    res.Add('\'');
+                }
+                else
+                {
+                    res.Add(c);
+                }
+            }
+            return new string(res.ToArray());
+        }
+
+        /// <summary>
+        /// TODO @xueyang: Apply NFC form may be too aggressive since it would ignore some accented characters that do not exist
+        ///   in predefined German alphabet(nemo.collections.common.tokenizers.text_to_speech.ipa_lexicon.IPA_CHARACTER_SETS),
+        ///   such as 'é'. This is not expected.A better solution is to add an extra normalization with NFD to discard the
+        ///   diacritics and consider 'é' and 'e' produce similar pronunciations.
+        ///
+        /// Note that the tokenizer needs to run `unicodedata.normalize("NFC", x)` before calling `encode` function,
+        /// especially for the characters that have diacritics, such as 'ö' in the German alphabet. 'ö' can be encoded as
+        /// b'\xc3\xb6' (one char) as well as b'o\xcc\x88' (two chars). Without the normalization of composing two chars
+        /// together and without a complete predefined set of diacritics, when the tokenizer reads the input sentence
+        /// char-by-char, it would skip the combining diaeresis b'\xcc\x88', resulting in indistinguishable pronunciations
+        /// for 'ö' and 'o'.
+        /// </summary>
+        /// <param name="text">the original input sentence.</param>
+        /// <returns>NFC normalized sentence.</returns>
+        private static string NormalizeUnicodeText(string text)
+        {
+            // normalize word with NFC form
+            return text.Normalize(NormalizationForm.FormC);
         }
 
         public static string EnglishTextPreprocessing(string text, bool lower = true)

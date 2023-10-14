@@ -18,7 +18,7 @@ namespace NeMoOnnxSharp.Example
 
         static async Task Main(string[] args)
         {
-            string task = args.Length > 0 ? args[0] : "streamaudio";
+            string task = args.Length > 0 ? args[0] : "speak_german";
 
             if (task == "transcribe")
             {
@@ -27,6 +27,10 @@ namespace NeMoOnnxSharp.Example
             else if (task == "speak")
             {
                 await SpeakAsync();
+            }
+            else if (task == "speak_german")
+            {
+                await SpeakGermanAsync();
             }
             else if (task == "vad")
             {
@@ -57,13 +61,13 @@ namespace NeMoOnnxSharp.Example
         static async Task TranscribeAsync()
         {
             string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
-            string modelPath = await DownloadModelAsync("stt_en_quartznet15x5");
+            string modelPath = await DownloadModelAsync("stt_de_quartznet15x5");
             string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
             string inputPath = Path.Combine(inputDirPath, "transcript.txt");
             var config = new EncDecCTCConfig
             {
                 modelPath = modelPath,
-                vocabulary = EncDecCTCConfig.EnglishVocabulary
+                vocabulary = EncDecCTCConfig.GermanVocabulary
             };
             using var model = new EncDecCTCModel(config);
             using var reader = File.OpenText(inputPath);
@@ -121,6 +125,34 @@ namespace NeMoOnnxSharp.Example
                 if (result.AudioData == null) throw new InvalidDataException();
                 WaveFile.WriteWAV(waveFile, result.AudioData, result.SampleRate);
             }
+        }
+
+        static async Task SpeakGermanAsync()
+        {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string specGenModelPath = await DownloadModelAsync("tts_de_fastpitch_singleSpeaker_thorstenNeutral_2210");
+            string vocoderModelPath = await DownloadModelAsync("tts_de_hifigan_singleSpeaker_thorstenNeutral_2210");
+            var config = new SpeechConfig
+            {
+                specGen = new SpectrogramGeneratorConfig
+                {
+                    modelPath = specGenModelPath,
+                    textTokenizer = "GermanCharsTokenizer"
+                },
+                vocoder = new VocoderConfig
+                {
+                    modelPath = vocoderModelPath
+                },
+            };
+            using var synthesizer = new SpeechSynthesizer(config);
+            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
+            string name = "generated-samples_thorsten-21.06-emotional_neutral.wav";
+            string targetText = "Mist, wieder nichts geschafft.";
+            Console.WriteLine("Generating {0}...", name);
+            string waveFile = Path.Combine(inputDirPath, name);
+            var result = synthesizer.SpeakText(targetText);
+            if (result.AudioData == null) throw new InvalidDataException();
+            WaveFile.WriteWAV(waveFile, result.AudioData, result.SampleRate);
         }
 
         /// <summary>

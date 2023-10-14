@@ -22,7 +22,7 @@ namespace NeMoOnnxSharp.TTSTokenizers
     {
         public enum AddBlankAt
         {
-            False,
+            None,
             True,
             Last
         }
