@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using NeMoOnnxSharp.Models;
+using System.Reflection;
 
 namespace NeMoOnnxSharp.Example
 {
@@ -14,7 +15,7 @@ namespace NeMoOnnxSharp.Example
     {
         static async Task Main(string[] args)
         {
-            string task = args.Length == 0 ? "transcribe" : args[0];
+            string task = args.Length == 0 ? "german" : args[0];
 
             if (task == "transcribe")
             {
@@ -35,6 +36,10 @@ namespace NeMoOnnxSharp.Example
             else if (task == "streamaudio")
             {
                 await StreamAudioAsync();
+            }
+            else if (task == "german")
+            {
+                await GermanAsync();
             }
             else
             {
@@ -210,6 +215,58 @@ namespace NeMoOnnxSharp.Example
                 }
                 recognizer.Write(buffer.AsSpan(0, bytesRead));
             }
+        }
+
+        static async Task GermanAsync()
+        {
+            string appDirPath = AppDomain.CurrentDomain.BaseDirectory;
+            string vadModelPath = await DownloadModelAsync("vad_marblenet");
+            string asrModelPath = await DownloadModelAsync("stt_de_quartznet15x5");
+            string specGenModelPath = await DownloadModelAsync("tts_de_fastpitch_singleSpeaker_thorstenNeutral_2210");
+            string vocoderModelPath = await DownloadModelAsync("tts_de_hifigan_singleSpeaker_thorstenNeutral_2210");
+            var config = new SpeechConfig
+            {
+                vad = new EncDecClassificationConfig
+                {
+                    modelPath = vadModelPath,
+                    labels = EncDecClassificationConfig.VADLabels
+                },
+                asr = new EncDecCTCConfig
+                {
+                    modelPath = asrModelPath,
+                    vocabulary = EncDecCTCConfig.GermanVocabulary
+                },
+                specGen = new SpectrogramGeneratorConfig
+                {
+                    modelPath = specGenModelPath,
+                    textTokenizer = "GermanCharsTokenizer"
+                },
+                vocoder = new VocoderConfig
+                {
+                    modelPath = vocoderModelPath
+                },
+            };
+            using var recognizer = new SpeechRecognizer(config);
+            using var synthesizer = new SpeechSynthesizer(config);
+            string inputDirPath = Path.Combine(appDirPath, "..", "..", "..", "..", "test_data");
+            string name = "samples_thorsten-21.06-emotional_neutral.wav";
+            string targetText = "Mist, wieder nichts geschafft.";
+            Console.WriteLine("Recognizing {0}...", name);
+            string waveFile = Path.Combine(inputDirPath, name);
+            var audioSignal = WaveFile.ReadWAV(waveFile, recognizer.SampleRate);
+            recognizer.Recognized += (s, e) =>
+            {
+                double t = (double)e.Offset / recognizer.SampleRate;
+                Console.WriteLine("Recognized {0} {1} {2}", t, e.Audio?.Length, e.Text);
+            };
+            recognizer.Write(new short[32000]);
+            recognizer.Write(audioSignal);
+            recognizer.Write(new short[32000]);
+            Console.WriteLine("Generating {0}...", name);
+            waveFile = Path.Combine(inputDirPath, "generated-" + name);
+            var result = synthesizer.SpeakText(targetText);
+            if (result.AudioData == null) throw new InvalidDataException();
+            WaveFile.WriteWAV(waveFile, result.AudioData, result.SampleRate);
         }
 
         private static MemoryStream GetAllAudioStream(

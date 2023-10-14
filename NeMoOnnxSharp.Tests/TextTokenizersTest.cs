@@ -44,6 +44,29 @@ namespace NeMoOnnxSharp.Tests
             73,   0,  22,  68, 100,   0
         };
 
+        private static readonly char[] ExpectedGermanTokens =
+        {
+            ' ',
+            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+            'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+            'U', 'V', 'W', 'X', 'Y', 'Z', 'Ä', 'Ö', 'Ü', 'ẞ',
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+            'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+            'u', 'v', 'w', 'x', 'y', 'z', 'ä', 'ö', 'ü', 'ß',
+            '\'',
+            '!', '"', '(', ')', ',', '-', '.', '/', ':', ';',
+            '?', '[', ']', '{', '}', '«', '»', '‒', '–', '—',
+            '‘', '‚', '“', '„', '‹', '›'
+        };
+
+        private const string GermanText = "Mist, wieder nichts geschafft.";
+
+        private readonly static int[] GermanParsed =
+        {
+             0, 13, 39, 49, 50, 66,  0, 53, 39, 35, 34, 35, 48,  0, 44, 39, 33, 38,
+             50, 49,  0, 37, 35, 49, 33, 38, 31, 36, 36, 50, 68,  0
+        };
+
         [TestInitialize]
         public void Initialize()
         {
@@ -85,8 +108,20 @@ namespace NeMoOnnxSharp.Tests
             CollectionAssert.AreEquivalent(SampleParsed, parsed);
         }
 
-        private EnglishG2p? _g2p;
-        private EnglishPhonemesTokenizer? _tokenizer;
+        [TestMethod]
+        public void TestGermanVocab()
+        {
+            _tokenizer = new GermanCharsTokenizer(padWithSpace: true);
+            var expectedTokens = ExpectedGermanTokens.Select(c => c.ToString()).ToList();
+            expectedTokens.Add("<pad>");
+            expectedTokens.Add("<oov>");
+            CollectionAssert.AreEquivalent(expectedTokens, _tokenizer.Tokens);
 
+            var parsed = _tokenizer.Encode(GermanText);
+            CollectionAssert.AreEquivalent(GermanParsed, parsed);
+        }
+
+        private EnglishG2p? _g2p;
+        private BaseTokenizer? _tokenizer;
     }
 }

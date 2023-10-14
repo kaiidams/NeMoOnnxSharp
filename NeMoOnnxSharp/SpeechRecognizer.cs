@@ -53,6 +53,17 @@ namespace NeMoOnnxSharp
             Write(input.AsSpan(offset, count));
         }
 
+        public void Write(short[] input, int offset, int count)
+        {
+            Write(input.AsSpan(offset, count));
+        }
+
+        public void Write(Span<short> input)
+        {
+            var bytes = MemoryMarshal.Cast<short, byte>(input);
+            Write(bytes);
+        }
+
         public void Write(Span<byte> input)
         {
             while (input.Length > 0)

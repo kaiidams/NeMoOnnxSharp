@@ -16,20 +16,7 @@ namespace NeMoOnnxSharp.Models
 
         public SpectrogramGenerator(SpectrogramGeneratorConfig config) : base(config)
         {
-            if (config.phonemeDictPath == null) throw new ArgumentNullException();
-            if (config.heteronymsPath == null) throw new ArgumentNullException();
-            var g2p = new EnglishG2p(
-                phonemeDict: config.phonemeDictPath,
-                heteronyms: config.heteronymsPath,
-                phonemeProbability: 1.0);
-            _tokenizer = new EnglishPhonemesTokenizer(
-                g2p,
-                punct: true,
-                stresses: true,
-                chars: true,
-                apostrophe: true,
-                padWithSpace: true,
-                addBlankAt: BaseTokenizer.AddBlankAt.True);
+            _tokenizer = _SetupTokenizer(config);
         }
 
         public void Dispose()
@@ -45,6 +32,38 @@ namespace NeMoOnnxSharp.Models
             }
             var encoded = _tokenizer.Encode(strInput);
             return encoded;
+        }
+
+        private static BaseTokenizer _SetupTokenizer(SpectrogramGeneratorConfig config)
+        {
+            BaseTokenizer tokenizer;
+            if (config.textTokenizer == "EnglishPhonemesTokenizer")
+            {
+                if (config.phonemeDictPath == null) throw new ArgumentNullException();
+                if (config.heteronymsPath == null) throw new ArgumentNullException();
+                var g2p = new EnglishG2p(
+                    phonemeDict: config.phonemeDictPath,
+                    heteronyms: config.heteronymsPath,
+                    phonemeProbability: 1.0);
+                tokenizer = new EnglishPhonemesTokenizer(
+                    g2p,
+                    punct: true,
+                    stresses: true,
+                    chars: true,
+                    apostrophe: true,
+                    padWithSpace: true,
+                    addBlankAt: BaseTokenizer.AddBlankAt.True);
+            }
+            else if (config.textTokenizer == "GermanCharsTokenizer")
+            {
+                tokenizer = new GermanCharsTokenizer(
+                    padWithSpace: true);
+            }
+            else
+            {
+                throw new ArgumentException();
+            }
+            return tokenizer;
         }
 
         private string _NormalizeText(string strInput)

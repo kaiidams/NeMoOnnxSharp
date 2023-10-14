@@ -56,6 +56,21 @@ namespace NeMoOnnxSharp.Example
                     "b701909aedf753172eff223950f8859cd4b9b4c80199cf0a6e9ac4a307c8f8ec"
                 ),
                 new PretrainedModelInfo(
+                    "stt_de_quartznet15x5",
+                    "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.3/stt_de_quartznet15x5.onnx",
+                    "c6499961539c349117c4c724ba5f333d26b3242d2d39571fde44c3baa66d55fc"
+                ),
+                new PretrainedModelInfo(
+                    "tts_de_fastpitch_singleSpeaker_thorstenNeutral_2210",
+                    "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.3/tts_de_fastpitch_singleSpeaker_thorstenNeutral_2210.onnx",
+                    "35d351dcb5113a3af2eecc5051b42b747623328168a57b36b311f3396d5c1c74"
+                ),
+                new PretrainedModelInfo(
+                    "tts_de_hifigan_singleSpeaker_thorstenNeutral_2210",
+                    "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.3/tts_de_hifigan_singleSpeaker_thorstenNeutral_2210.onnx",
+                    "6be4e33bcc7e34b111d34be79157922802b224c2c4f1cc93dd62a5c19d936ade"
+                ),
+                new PretrainedModelInfo(
                     "tts_en_fastpitch",
                     "https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.2/tts_en_fastpitch.onnx",
                     "a297174dea1084bd34d1af1a8447bc07f6c8aab7a4fea312c610eba6bc3d0eac"
