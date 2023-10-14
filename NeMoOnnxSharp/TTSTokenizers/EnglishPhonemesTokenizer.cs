@@ -52,7 +52,7 @@ namespace NeMoOnnxSharp.TTSTokenizers
             bool apostrophe = true,
             string oov = BaseTokenizer.OOV,
             string sep = "|",  // To be able to distinguish between 2/3 letters codes.
-            AddBlankAt addBlankAt = AddBlankAt.False,
+            AddBlankAt addBlankAt = AddBlankAt.None,
             bool padWithSpace = false)
         // object? text_preprocessing_func=lambda text: english_text_preprocessing(text, lower=false),
         {
@@ -107,14 +107,19 @@ namespace NeMoOnnxSharp.TTSTokenizers
 
             tokens.Add(Pad);
             _pad = tokens.Count;
-            if (addBlankAt != AddBlankAt.True)
+            if (addBlankAt != AddBlankAt.None)
+            {
+                _blank = tokens.Count;
+                tokens.Add(Blank);
+            }
+
+            tokens.Add(oov);  // Out Of Vocabulary
+            _oov = tokens.Count;
+
+            if (addBlankAt == AddBlankAt.Last)
             {
                 throw new NotImplementedException();
             }
-            tokens.Add(Blank);
-            _blank = tokens.Count;
-            tokens.Add(oov);  // Out Of Vocabulary
-            _oov = tokens.Count;
 
             _sep = sep;
             _padWithSpace = padWithSpace;

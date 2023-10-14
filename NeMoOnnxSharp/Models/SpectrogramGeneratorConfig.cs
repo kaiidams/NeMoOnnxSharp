@@ -12,5 +12,6 @@ namespace NeMoOnnxSharp.Models
     {
         public string? phonemeDictPath;
         public string? heteronymsPath;
+        public string? textTokenizer;
     }
 }
