@@ -97,7 +97,8 @@ namespace NeMoOnnxSharp.Example
                 {
                     modelPath = specGenModelPath,
                     phonemeDictPath = phonemeDict,
-                    heteronymsPath = heteronyms
+                    heteronymsPath = heteronyms,
+                    textTokenizer = "EnglishPhonemesTokenizer"
                 },
                 vocoder = new VocoderConfig
                 {
