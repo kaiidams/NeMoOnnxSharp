@@ -268,8 +268,15 @@ public partial class Demo : Node2D
 	{
 		GD.Print(string.Format("Language={0}", language));
 
-		_speaking = false;
-		_transcribing = false;
+		if (_transcribing)
+		{
+			_transcribing = false;
+			_microphone.Stop();
+		}
+		if (_speaking)
+		{
+			_speaking = false;
+		}
 
 		_languageMenu.Text = language;
 		_language = language;
@@ -277,6 +284,7 @@ public partial class Demo : Node2D
 		_modelNames = _GetModelList();
 		if (_CheckAllCacheFile())
 		{
+			_loadingIndex = _modelNames.Length;
 			_ModelsDownloaded();
 		}
 		else
