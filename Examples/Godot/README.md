@@ -16,15 +16,7 @@ This supports VAD (voice activation detection), speech recognition and speech sy
 - Open the directory with Godot Editor
 - Open the solution with Visual Studio 2022
 - From menu Build -> Build Solution
-
-Copy these native DLL files must be on the directory. You can
-find them usually in `.godot\mono\temp\bin\Debug\runtimes\win-x64\native`.
-
-- onnxruntime.dll
-- onnxruntime_providers_shared.dll
-
-Then run with debugger (F5) from Godot Editor
-or export to Windows exe.
+- Then run with debugger (F5) from Godot Editor or export to Windows exe.
 
 ## Running
 
