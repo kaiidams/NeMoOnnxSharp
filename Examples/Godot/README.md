@@ -41,4 +41,4 @@ NeMoOnnxSharp needs ONNX Runtime NuGet package. Add these to your `.csproj` file
 
 `Script.cs` is the main script to use. Attach it to a Godot node in the inspector.
 
-![screen shot](screenshots/NeMoOnnxGodot.png)
+![screen shot](screenshots/Script.png)
