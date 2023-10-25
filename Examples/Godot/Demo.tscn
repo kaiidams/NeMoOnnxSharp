@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://fs7m4gwfsxs8"]
+[gd_scene load_steps=3 format=3 uid="uid://fs7m4gwfsxs8"]
 
 [ext_resource type="Script" path="res://Demo.cs" id="1"]
+[ext_resource type="Script" path="res://addons/NeMoOnnxGodot/Speech.cs" id="2_nm1hr"]
 
 [node name="Node2D" type="Node2D"]
 script = ExtResource("1")
@@ -73,3 +74,6 @@ metadata/_edit_use_anchors_ = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Stop"
+
+[node name="Speech" type="Node" parent="."]
+script = ExtResource("2_nm1hr")
