@@ -2,23 +2,39 @@ using Godot;
 using NeMoOnnxSharp;
 using NeMoOnnxSharp.Models;
 using System;
-using System.Linq;
 
 [GlobalClass]
 public partial class Speech : Node
 {
+	/// <summary>
+	/// Signal emit when downloading is finished.
+	/// </summary>
+	/// <param name="success"></param>
     [Signal]
     public delegate void DownloadEndEventHandler(bool success);
 
+	/// <summary>
+	/// Signal emit when speaking is finished.
+	/// </summary>
     [Signal]
     public delegate void SpeakEndEventHandler();
 
+	/// <summary>
+	/// Signal emit when VAD detects speech.
+	/// </summary>
     [Signal]
     public delegate void SpeechStartDetectedEventHandler();
 
+    /// <summary>
+    /// Signal emit when VAD detects non speech.
+    /// </summary>
     [Signal]
     public delegate void SpeechEndDetectedEventHandler();
 
+	/// <summary>
+	/// Signal emit when spoken text is recognized.
+	/// </summary>
+	/// <param name="text"></param>
     [Signal]
     public delegate void RecognizedEventHandler(string text);
 
@@ -57,9 +73,6 @@ public partial class Speech : Node
 			_ChangeLanguage(value);
 		}
 	}
-
-	[Export]
-	public string ModelPath { get; set; }
 
     public bool IsTranscribing { get { return _transcribing; } }
 
