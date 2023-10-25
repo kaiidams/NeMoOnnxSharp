@@ -22,20 +22,17 @@ public partial class Speech : Node
     [Signal]
     public delegate void RecognizedEventHandler(string text);
 
-    private const int AudioChunkSize = 4096;
-	
-	// User interface
-	private Button _downloadButton;
+    private const int _AudioChunkSize = 4096;
 
-	private string _language;
-
-	// Model downloading
-	int _loadingIndex = -1;
+    // Model downloading
+    private string _language;
+    int _loadingIndex = -1;
 	private string[] _modelNames;
 	private HttpRequest _httpRequest;
 	private SpeechRecognizer _recognizer;
 	private SpeechSynthesizer _synthesizer;
 
+	// AudioBus
 	private bool _transcribing;
 	private bool _speaking;
 	private AudioStreamPlayer _microphone;
@@ -45,6 +42,9 @@ public partial class Speech : Node
 	private short[] _waveData;
 	private int _waveIndex;
 
+	/// <summary>
+	/// Language of speech. <c>English</c> or <c>German</c>
+	/// </summary>
 	[Export]
 	public string Language
 	{
@@ -61,9 +61,9 @@ public partial class Speech : Node
 	[Export]
 	public string ModelPath { get; set; }
 
-    public bool IsTranscribing { get { return _speaking; } }
+    public bool IsTranscribing { get { return _transcribing; } }
 
-    public bool IsSpeaking { get { return _transcribing; } }
+    public bool IsSpeaking { get { return _speaking; } }
 
 
     // Called when the node enters the scene tree for the first time.
@@ -155,9 +155,9 @@ public partial class Speech : Node
 	/// <returns></returns>
 	public bool CheckAllModelFiles()
 	{
-		if (_modelNames == null)
+		if (_language == null || _modelNames == null)
 		{
-			throw new InvalidOperationException();
+			throw new InvalidOperationException("Language must be set.");
 		}
 		foreach (var name in _modelNames)
 		{
@@ -175,13 +175,41 @@ public partial class Speech : Node
 	/// </summary>
 	public void DownloadAllModelFiles()
 	{
+		if (_language == null || _modelNames == null)
+        {
+            throw new InvalidOperationException("Language must be set.");
+        }
+        if (_loadingIndex >= 0)
+		{
+			throw new InvalidOperationException("Already start downloading.");
+		}
+		_DownloadNextModel();
+    }
 
-	}
-
+    private void _DownloadNextModel()
+    {
+        while (true)
+        {
+            _loadingIndex++;
+            if (_loadingIndex >= _modelNames.Length)
+            {
+                EmitSignal(SignalName.DownloadEnd, true);
+                return;
+            }
+            string name = _modelNames[_loadingIndex];
+            var info = PretrainedModelInfo.Get(name);
+            if (!_CheckCacheFile(_GetCachePathFromUrl(info.Location), info.Hash))
+            {
+                _httpRequest.Request(info.Location);
+                return;
+            }
+        }
+    }   
+	
 	/// <summary>
-	/// Get the status of downloading
-	/// </summary>
-	/// <returns></returns>
+    /// Get the status of downloading
+    /// </summary>
+    /// <returns></returns>
     public DownloadStatus GetDownloadStatus()
     {
         if (_loadingIndex >= 0 && _loadingIndex < _modelNames.Length)
@@ -249,7 +277,7 @@ public partial class Speech : Node
     public void SpeakText(string text)
     {
         var result = _synthesizer.SpeakText(text);
-        _waveData = result.AudioData.ToList().ToArray();
+        _waveData = result.AudioData;
         _waveIndex = 0;
         _speaker.Play();
         _playback = _speaker.GetStreamPlayback() as AudioStreamGeneratorPlayback;
@@ -263,6 +291,8 @@ public partial class Speech : Node
         if (_speaking)
         {
             _speaking = false;
+            _waveIndex = 0;
+            _waveData = null;
         }
     }
 
@@ -273,12 +303,14 @@ public partial class Speech : Node
 			if (_waveIndex >= _waveData.Length)
 			{
 				_speaking = false;
+				_waveIndex = 0;
+				_waveData = null;
                 EmitSignal(SignalName.SpeakEnd);
 				return;
 			}
 
 			var toFill = Math.Min(_waveData.Length - _waveIndex, _playback.GetFramesAvailable());
-			toFill = Math.Min(toFill, AudioChunkSize);
+			toFill = Math.Min(toFill, _AudioChunkSize);
 
 			if (toFill > 0)
 			{
@@ -323,7 +355,9 @@ public partial class Speech : Node
 			var file = FileAccess.Open(_GetCachePathFromUrl(info.Location), FileAccess.ModeFlags.Write);
 			file.StoreBuffer(body);
 			file.Close();
-		}
+
+            _DownloadNextModel();
+        }
 		else
 		{
             _loadingIndex = -1;
@@ -348,9 +382,11 @@ public partial class Speech : Node
 		if (_speaking)
 		{
 			_speaking = false;
-		}
+            _waveIndex = 0;
+            _waveData = null;
+        }
 
-		_language = language;
+        _language = language;
 
 		_modelNames = _GetModelList();
 		if (CheckAllModelFiles())
@@ -369,7 +405,7 @@ public partial class Speech : Node
 
 	private string[] _GetModelList()
 	{
-		if (Language == "English")
+		if (_language == "English")
 		{
 			return new string[]
 			{
@@ -381,7 +417,7 @@ public partial class Speech : Node
 				"tts_en_hifigan",
 			};
 		}
-		else if (Language == "German")
+		else if (_language == "German")
 		{
 			return new string[]
 			{
@@ -400,7 +436,7 @@ public partial class Speech : Node
 	private SpeechConfig _GetSpeechConfig()
 	{
 		SpeechConfig config;
-		if (Language == "English")
+		if (_language == "English")
 		{
 			config = new SpeechConfig
 			{
@@ -427,7 +463,7 @@ public partial class Speech : Node
 				},
 			};
 		}
-		else if (Language == "German")
+		else if (_language == "German")
 		{
 			config = new SpeechConfig
 			{

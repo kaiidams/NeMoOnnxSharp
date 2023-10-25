@@ -61,8 +61,15 @@ public partial class Demo : Node2D
         };
 		_speech.DownloadEnd += (bool success) =>
 		{
-            _downloadButton.Disabled = false;
-            _SetStatusText("Error downloading models");
+			if (success)
+			{
+				_ModelsDownloaded();
+            }
+			else
+			{
+                _downloadButton.Disabled = false;
+                _SetStatusText("Error downloading models");
+            }
         };
     }
 
@@ -135,19 +142,6 @@ public partial class Demo : Node2D
 		UpdateButtons();
 	}
 
-	public void HttpRequestCompleted(
-		int result, int responseCode, string[] headers, byte[] body)
-	{
-		if (result == 0)
-		{			
-		}
-		else
-		{
-			_downloadButton.Disabled = false;
-			_SetStatusText("Error downloading models");
-		}
-	}
-
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
@@ -162,6 +156,7 @@ public partial class Demo : Node2D
 	{
 		GD.Print(string.Format("Language={0}", language));
 		_speech.Language = language;
+		_languageMenu.Text = language;
 		if (_speech.CheckAllModelFiles())
 		{
 			_ModelsDownloaded();
