@@ -148,7 +148,7 @@ public partial class Demo : Node2D
         var status = _speech.GetDownloadStatus();
         if (status != null)
         {
-            _label.Text = string.Format("Loading {0} {1}% ({1}KB)", status.FileName, status.Percent, status.FileSize);
+            _label.Text = string.Format("Loading {0} {1}% ({2}KB)", status.FileName, status.Percent, status.FileSize);
         }
     }
 
