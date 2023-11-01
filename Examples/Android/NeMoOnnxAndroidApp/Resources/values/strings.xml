@@ -1,0 +1,27 @@
+<resources>
+  <string name="app_name">NeMo ONNX Sample App</string>
+  <string name="action_settings">Settings</string>
+  <string name="language">Language</string>
+  <string name="download_models">Download models</string>
+  <string name="cancel_downloading">Cancel downloding</string>
+  <string name="start_recording">Start recording</string>
+  <string name="stop_recording">Stop recording</string>
+  <string name="start_playing">Start playing</string>
+  <string name="stop_playing">Stop playing</string>
+  <string name="default_input_text_en">The quick brown fox jumps over the lazy dog.</string>
+  <string name="default_input_text_de">Franz jagt im komplett verwahrlosten Taxi quer durch Bayern.</string>
+  <string name="audio_recording_permission_denied">Permission to use microphone denied.</string>
+  <string name="not_implemented">Not implemented.</string>
+  <string name="status_need_download">Models need to be downloaded</string>
+  <string name="status_ready">Ready</string>
+  <string name="status_speech">Speech detected</string>
+  <string name="status_background">Speech not detected</string>
+  <string name="status_downloading">Downloading {0}...</string>
+  <string name="status_preparing">Preparing models...</string>
+  <string name="status_canceled">Canceled</string>
+  <string name="about">https://github.com/kaiidams/NeMoOnnxSharp</string>
+  <string-array name="language">
+    <item>English</item>
+    <item>German</item>
+  </string-array>
+</resources>

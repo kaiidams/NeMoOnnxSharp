@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34221.43
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeMoOnnxAndroidApp", "NeMoOnnxAndroidApp\NeMoOnnxAndroidApp.csproj", "{EB467DB1-CD13-4472-AAD0-5230750FA96A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EB467DB1-CD13-4472-AAD0-5230750FA96A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB467DB1-CD13-4472-AAD0-5230750FA96A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB467DB1-CD13-4472-AAD0-5230750FA96A}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{EB467DB1-CD13-4472-AAD0-5230750FA96A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB467DB1-CD13-4472-AAD0-5230750FA96A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB467DB1-CD13-4472-AAD0-5230750FA96A}.Release|Any CPU.Deploy.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2231A8A5-0499-4EBD-86D3-66DDE69D51E4}
+	EndGlobalSection
+EndGlobal

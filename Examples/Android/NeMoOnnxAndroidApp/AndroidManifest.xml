@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.gmail.katsuya_iida.nemo_onnx_android_app">
+	<uses-sdk android:minSdkVersion="21" android:targetSdkVersion="33" />
+	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:label="@string/app_name" android:supportsRtl="true"></application>
+	<uses-permission android:name="android.permission.RECORD_AUDIO" />
+	<uses-permission android:name="android.permission.INTERNET" />
+	<queries>
+		<intent>
+			<action android:name="android.intent.action.VIEW" />
+			<data android:scheme="http" />
+		</intent>
+		<intent>
+			<action android:name="android.intent.action.VIEW" />
+			<data android:scheme="https" />
+		</intent>
+	</queries>
+</manifest>
