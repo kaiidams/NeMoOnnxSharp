@@ -91,6 +91,7 @@ namespace NeMoOnnxSharp.Example
             using (var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
             {
                 response.EnsureSuccessStatusCode();
+                long currentPosition = 0;
                 long? contentLength = response.Content.Headers.ContentLength;
                 using (var reader = await response.Content.ReadAsStreamAsync(cancellationToken))
                 {
@@ -102,11 +103,12 @@ namespace NeMoOnnxSharp.Example
                         while ((bytesRead = await reader.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) != 0)
                         {
                             await writer.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+                            currentPosition += bytesRead;
                             var currentDateTime = DateTime.UtcNow;
-                            if ((lastDateTime - currentDateTime).Seconds >= 1)
+                            if ((currentDateTime - lastDateTime).Seconds >= 1)
                             {
                                 lastDateTime = currentDateTime;
-                                ShowProgress(reader.Position, contentLength);
+                                ShowProgress(currentPosition, contentLength);
                             }
                         }
                     }
