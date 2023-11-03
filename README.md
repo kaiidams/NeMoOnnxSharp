@@ -191,4 +191,4 @@ See `NeMoOnnxTest.postprocess()` for Python implementation.
 
 ## Examples
 
-- [Godot](Examples/Godot)
+- [Godot](https://godotengine.org/asset-library/asset/2298)
