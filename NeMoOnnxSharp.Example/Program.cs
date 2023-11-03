@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using NeMoOnnxSharp.Models;
-using System.Reflection;
 
 namespace NeMoOnnxSharp.Example
 {

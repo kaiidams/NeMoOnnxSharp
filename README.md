@@ -109,6 +109,16 @@ Name | Target | Predicted
 61-70968-0061.wav|you are a worthy leech will presently whispered robin the wine has worked a marvel|you are a worthy leech will presently whispered robin the wine has worked a marvel
 61-70968-0062.wav|ay and show you some pretty tricks|i enshow you some pretty tricks
 
+## Text-to-speech samples
+
+NeMoOnnxSharp supports text-to-speech with FastSpeech and HiFiGAN.
+
+Generated | Target
+--- | ---
+[generated-61-70968-0000.wav](generated-61-70968-0000.wav)|he began a confused complaint against the wizard who had vanished behind the curtain on the left
+[generated-61-70968-0001.wav](generated-61-70968-0001.wav)|give not so earnest a mind to these mummeries child
+[generated-61-70968-0002.wav](generated-61-70968-0002.wav)|a golden fortune and a happy life
+
 ## Exporting ONNX
 
 Exported ONNX file is included in this repository. But if you want to do it yourself,
