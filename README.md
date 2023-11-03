@@ -115,9 +115,9 @@ NeMoOnnxSharp supports text-to-speech with FastSpeech and HiFiGAN.
 
 Generated | Target
 --- | ---
-[generated-61-70968-0000.wav](generated-61-70968-0000.wav)|he began a confused complaint against the wizard who had vanished behind the curtain on the left
-[generated-61-70968-0001.wav](generated-61-70968-0001.wav)|give not so earnest a mind to these mummeries child
-[generated-61-70968-0002.wav](generated-61-70968-0002.wav)|a golden fortune and a happy life
+[generated-61-70968-0000.wav](https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.3/generated-61-70968-0000.wav)|he began a confused complaint against the wizard who had vanished behind the curtain on the left
+[generated-61-70968-0001.wav](https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.3/generated-61-70968-0001.wav)|give not so earnest a mind to these mummeries child
+[generated-61-70968-0002.wav](https://github.com/kaiidams/NeMoOnnxSharp/releases/download/v1.3/generated-61-70968-0002.wav)|a golden fortune and a happy life
 
 ## Exporting ONNX
 
